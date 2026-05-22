@@ -9,6 +9,14 @@
 <body>
   <div class="pane">
     <div class="controls">
+      <label>mode</label>
+      <select id="mode">
+        <option>learning</option>
+        <option>practice</option>
+        <option>test</option>
+      </select>
+    </div>
+    <div class="controls">
       <label>grade</label>
       <select id="grade">
         <option>1</option>
@@ -21,10 +29,20 @@
         <option>1</option>
         <option>2</option>
       </select>
+      <label>category</label>
+      <select id="category"></select>
     </div>
     <div id="tree"></div>
   </div>
-  <div class="pane">right pane</div>
+  <div class="pane">
+    <div id="player">
+      <audio controls style="width: 100%;">
+        <source id="audio-source" type="audio/mpeg">
+        your browser does not support audio
+      </audio>
+      <div id="now-playing" style="margin-top: 10px; font-size: 14px;"></div>
+    </div>
+  </div>
 
   <script src="app.js"></script>
 </body>

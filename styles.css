@@ -28,6 +28,12 @@ body {
   align-items: center;
 }
 
+.controls:first-of-type {
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 15px;
+  margin-bottom: 15px;
+}
+
 label {
   margin-right: 5px;
 }
@@ -62,6 +68,6 @@ select {
   display: none;
 }
 
-#tree li.file::before {
-  content: '📄 ';
+#player {
+  padding: 10px;
 }
