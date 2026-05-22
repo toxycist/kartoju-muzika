@@ -232,18 +232,19 @@ function submitGuess() {
   if (isCorrect) {
     feedback.textContent = `correct! id: ${currentPracticeFile.trackId}`;
     feedback.style.color = '#0a0';
+    guessInput.disabled = true;
+    guessBtn.disabled = true;
+    if (clipAudio) clipAudio.pause();
+
+    setTimeout(() => {
+      playNextClip();
+    }, 1500);
   } else {
-    feedback.textContent = `wrong — correct id was ${currentPracticeFile.trackId}`;
+    feedback.textContent = `wrong, try again`;
     feedback.style.color = '#a00';
+    guessInput.value = '';
+    guessInput.focus();
   }
-
-  guessInput.disabled = true;
-  guessBtn.disabled = true;
-  if (clipAudio) clipAudio.pause();
-
-  setTimeout(() => {
-    playNextClip();
-  }, 1500);
 }
 
 async function loadTestFiles() {
