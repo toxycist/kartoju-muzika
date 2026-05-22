@@ -49,6 +49,10 @@ let testCorrectCount = 0;
 let testCurrentCount = 0;
 let testTotalCount = 10;
 
+function normalizeId(id) {
+  return String(parseInt(id) || 0);
+}
+
 async function loadCategories() {
   const grade = gradeSelect.value;
   const semester = semesterSelect.value;
@@ -158,8 +162,8 @@ async function loadPracticeFiles() {
 
     const filterText = idFilterInput.value.trim();
     if (filterText) {
-      const allowedIds = filterText.split(',').map(s => s.trim());
-      files = files.filter(f => allowedIds.includes(f.trackId));
+      const allowedIds = filterText.split(',').map(s => normalizeId(s.trim()));
+      files = files.filter(f => allowedIds.includes(normalizeId(f.trackId)));
     }
 
     practiceFiles = files;
@@ -186,10 +190,10 @@ async function playNextClip() {
   const category = categorySelect.value;
   const duration = durationInput.value;
 
-  const forceStartIds = forceStartInput.value.trim().split(',').map(s => s.trim());
-  const forceStart = forceStartIds.includes(currentPracticeFile.trackId);
+  const forceStartIds = forceStartInput.value.trim().split(',').map(s => normalizeId(s.trim()));
+  const forceStart = forceStartIds.includes(normalizeId(currentPracticeFile.trackId));
 
-  practiceStatus.textContent = `playing... (id: ${currentPracticeFile.trackId})`;
+  practiceStatus.textContent = `playing...`;
   feedback.textContent = '';
   guessInput.value = '';
   guessInput.disabled = false;
@@ -224,7 +228,7 @@ function submitGuess() {
   const guess = guessInput.value.trim();
   if (!guess) return;
 
-  const isCorrect = guess === currentPracticeFile.trackId;
+  const isCorrect = normalizeId(guess) === normalizeId(currentPracticeFile.trackId);
   if (isCorrect) {
     feedback.textContent = `correct! id: ${currentPracticeFile.trackId}`;
     feedback.style.color = '#0a0';
@@ -258,8 +262,8 @@ async function loadTestFiles() {
 
     const filterText = testIdFilterInput.value.trim();
     if (filterText) {
-      const allowedIds = filterText.split(',').map(s => s.trim());
-      files = files.filter(f => allowedIds.includes(f.trackId));
+      const allowedIds = filterText.split(',').map(s => normalizeId(s.trim()));
+      files = files.filter(f => allowedIds.includes(normalizeId(f.trackId)));
     }
 
     testFiles = files;
@@ -291,10 +295,10 @@ async function playNextTestClip() {
   const category = categorySelect.value;
   const duration = testDurationInput.value;
 
-  const forceStartIds = testForceStartInput.value.trim().split(',').map(s => s.trim());
-  const forceStart = forceStartIds.includes(currentTestFile.trackId);
+  const forceStartIds = testForceStartInput.value.trim().split(',').map(s => normalizeId(s.trim()));
+  const forceStart = forceStartIds.includes(normalizeId(currentTestFile.trackId));
 
-  testStatus.textContent = `playing... (id: ${currentTestFile.trackId})`;
+  testStatus.textContent = `playing...`;
   testProgress.textContent = `song ${testCurrentCount} of ${testTotalCount}`;
   testFeedback.textContent = '';
   testGuessInput.value = '';
@@ -330,7 +334,7 @@ function submitTestGuess() {
   const guess = testGuessInput.value.trim();
   if (!guess) return;
 
-  const isCorrect = guess === currentTestFile.trackId;
+  const isCorrect = normalizeId(guess) === normalizeId(currentTestFile.trackId);
   if (isCorrect) {
     testFeedback.textContent = `correct! id: ${currentTestFile.trackId}`;
     testFeedback.style.color = '#0a0';
@@ -439,7 +443,7 @@ modeSelect.addEventListener('change', async () => {
 
 guessBtn.addEventListener('click', submitGuess);
 guessInput.addEventListener('keypress', (e) => {
-  if (e.key === 'enter') submitGuess();
+  if (e.key === 'Enter') submitGuess();
 });
 
 pauseBtn.addEventListener('click', () => {
@@ -454,7 +458,7 @@ pauseBtn.addEventListener('click', () => {
 
 testGuessBtn.addEventListener('click', submitTestGuess);
 testGuessInput.addEventListener('keypress', (e) => {
-  if (e.key === 'enter') submitTestGuess();
+  if (e.key === 'Enter') submitTestGuess();
 });
 
 practiceStartBtn.addEventListener('click', async () => {
