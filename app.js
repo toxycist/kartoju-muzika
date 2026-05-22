@@ -12,7 +12,6 @@ const guessInput = document.getElementById('guess-input');
 const guessBtn = document.getElementById('guess-btn');
 const pauseBtn = document.getElementById('pause-btn');
 const feedback = document.getElementById('feedback');
-const practiceStatus = document.getElementById('practice-status');
 const testDurationInput = document.getElementById('test-duration-input');
 const testCountInput = document.getElementById('test-count-input');
 const testIdFilterInput = document.getElementById('test-id-filter-input');
@@ -20,7 +19,6 @@ const testForceStartInput = document.getElementById('test-force-start-input');
 const testGuessInput = document.getElementById('test-guess-input');
 const testGuessBtn = document.getElementById('test-guess-btn');
 const testFeedback = document.getElementById('test-feedback');
-const testStatus = document.getElementById('test-status');
 const testProgress = document.getElementById('test-progress');
 const testResults = document.getElementById('test-results');
 const audioSource = document.getElementById('audio-source');
@@ -153,7 +151,7 @@ async function loadPracticeFiles() {
   const category = categorySelect.value;
 
   if (!category) {
-    practiceStatus.textContent = 'no category selected';
+    feedback.textContent = 'no category selected';
     return;
   }
 
@@ -169,17 +167,17 @@ async function loadPracticeFiles() {
 
     practiceFiles = files;
     if (files.length === 0) {
-      practiceStatus.textContent = 'no matching files found';
+      feedback.textContent = 'no matching files found';
     }
   } catch (error) {
     console.error('error loading practice files:', error);
-    practiceStatus.textContent = 'error loading files';
+    feedback.textContent = 'error loading files';
   }
 }
 
 async function playNextClip() {
   if (practiceFiles.length === 0) {
-    practiceStatus.textContent = 'no files available';
+    feedback.textContent = 'no files available';
     return;
   }
 
@@ -194,7 +192,6 @@ async function playNextClip() {
   const forceStartIds = forceStartInput.value.trim().split(',').map(s => normalizeId(s.trim()));
   const forceStart = forceStartIds.includes(normalizeId(currentPracticeFile.trackId));
 
-  practiceStatus.textContent = `playing...`;
   feedback.textContent = '';
   guessInput.value = '';
   guessInput.disabled = false;
@@ -221,7 +218,7 @@ async function playNextClip() {
     };
   } catch (error) {
     console.error('error playing clip:', error);
-    practiceStatus.textContent = 'error playing clip';
+    feedback.textContent = 'error playing clip';
   }
 }
 
@@ -254,7 +251,8 @@ async function loadTestFiles() {
   const category = categorySelect.value;
 
   if (!category) {
-    testStatus.textContent = 'no category selected';
+    testFeedback.textContent = 'no category selected';
+    testResults.style.display = 'none';
     return;
   }
 
@@ -274,11 +272,13 @@ async function loadTestFiles() {
     testCurrentCount = 0;
 
     if (files.length === 0) {
-      testStatus.textContent = 'no matching files found';
+      testFeedback.textContent = 'no matching files found';
+      testResults.style.display = 'none';
     }
   } catch (error) {
     console.error('error loading test files:', error);
-    testStatus.textContent = 'error loading files';
+    testFeedback.textContent = 'error loading files';
+    testResults.style.display = 'none';
   }
 }
 
@@ -300,7 +300,6 @@ async function playNextTestClip() {
   const forceStartIds = testForceStartInput.value.trim().split(',').map(s => normalizeId(s.trim()));
   const forceStart = forceStartIds.includes(normalizeId(currentTestFile.trackId));
 
-  testStatus.textContent = `playing...`;
   testProgress.textContent = `song ${testCurrentCount} of ${testTotalCount}`;
   testFeedback.textContent = '';
   testGuessInput.value = '';
@@ -328,7 +327,7 @@ async function playNextTestClip() {
     };
   } catch (error) {
     console.error('error playing clip:', error);
-    testStatus.textContent = 'error playing clip';
+    testFeedback.textContent = 'error playing clip';
   }
 }
 
@@ -356,23 +355,26 @@ function submitTestGuess() {
 }
 
 function showTestResults() {
-  testStatus.textContent = 'test complete';
+  const isError = testFeedback.textContent.includes('error') || testFeedback.textContent.includes('no ');
+
+  if (!isError) {
+    testFeedback.textContent = '';
+    testResults.innerHTML = `
+      <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">results</div>
+      <div>correct: ${testCorrectCount} / ${testTotalCount}</div>
+    `;
+    testResults.style.display = 'block';
+  }
+
   testProgress.textContent = '';
   testGuessInput.style.display = 'none';
   testGuessBtn.style.display = 'none';
-  testFeedback.textContent = '';
   testStartBtn.style.display = 'block';
   testStopBtn.style.display = 'none';
   testDurationInput.disabled = false;
   testCountInput.disabled = false;
   testIdFilterInput.disabled = false;
   testForceStartInput.disabled = false;
-
-  testResults.innerHTML = `
-    <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">results</div>
-    <div>correct: ${testCorrectCount} / ${testTotalCount}</div>
-  `;
-  testResults.style.display = 'block';
 }
 
 gradeSelect.addEventListener('change', loadCategories);
