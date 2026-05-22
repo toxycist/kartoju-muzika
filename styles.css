@@ -1,0 +1,67 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  text-transform: lowercase;
+}
+
+body {
+  height: 100vh;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+}
+
+.pane {
+  border-right: 1px solid #ccc;
+  padding: 20px;
+  overflow: auto;
+}
+
+.pane:last-child {
+  border-right: none;
+}
+
+.controls {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 20px;
+  align-items: center;
+}
+
+label {
+  margin-right: 5px;
+}
+
+select {
+  padding: 5px;
+}
+
+#tree ul {
+  list-style: none;
+  padding-left: 0;
+}
+
+#tree li {
+  padding: 5px 0;
+}
+
+#tree li.folder {
+  cursor: pointer;
+}
+
+#tree li.folder > .folder-label::before {
+  content: '▼ ';
+  margin-right: 3px;
+}
+
+#tree li.folder.collapsed > .folder-label::before {
+  content: '▶ ';
+}
+
+#tree ul.collapsed {
+  display: none;
+}
+
+#tree li.file::before {
+  content: '📄 ';
+}
