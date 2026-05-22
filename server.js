@@ -53,6 +53,7 @@ app.get('/api/files/:grade/:semester/:category', (req, res) => {
 app.get('/api/clip/:grade/:semester/:category/:filename', (req, res) => {
   const { grade, semester, category, filename } = req.params;
   const duration = parseInt(req.query.duration) || 30;
+  const forceStart = req.query.forceStart === 'true';
   const folderPath = path.join(baseDir, `grade_${grade}`, `semester_${semester}`, category);
   const filePath = path.join(folderPath, filename);
 
@@ -68,8 +69,11 @@ app.get('/api/clip/:grade/:semester/:category/:filename', (req, res) => {
 
       const totalDuration = data.format.duration;
       const clipDuration = Math.min(duration, totalDuration);
-      const maxStart = Math.max(0, totalDuration - clipDuration);
-      const startTime = maxStart > 0 ? Math.random() * maxStart : 0;
+      let startTime = 0;
+
+      if (!forceStart && totalDuration > clipDuration) {
+        startTime = Math.random() * (totalDuration - clipDuration);
+      }
 
       const tmpFile = path.join('/tmp', `clip_${Date.now()}_${Math.random().toString(36).substr(2, 9)}.mp3`);
 
