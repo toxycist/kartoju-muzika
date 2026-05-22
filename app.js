@@ -3,9 +3,31 @@ const gradeSelect = document.getElementById('grade');
 const semesterSelect = document.getElementById('semester');
 const categorySelect = document.getElementById('category');
 const treeContainer = document.getElementById('tree');
+const practiceMode = document.getElementById('practice-mode');
+const testMode = document.getElementById('test-mode');
+const durationInput = document.getElementById('duration-input');
+const idFilterInput = document.getElementById('id-filter-input');
+const guessInput = document.getElementById('guess-input');
+const guessBtn = document.getElementById('guess-btn');
+const pauseBtn = document.getElementById('pause-btn');
+const feedback = document.getElementById('feedback');
+const practiceStatus = document.getElementById('practice-status');
+const testDurationInput = document.getElementById('test-duration-input');
+const testCountInput = document.getElementById('test-count-input');
+const testIdFilterInput = document.getElementById('test-id-filter-input');
+const testGuessInput = document.getElementById('test-guess-input');
+const testGuessBtn = document.getElementById('test-guess-btn');
+const testFeedback = document.getElementById('test-feedback');
+const testStatus = document.getElementById('test-status');
+const testProgress = document.getElementById('test-progress');
+const testResults = document.getElementById('test-results');
 const audioSource = document.getElementById('audio-source');
 const nowPlaying = document.getElementById('now-playing');
 const audio = audioSource.parentElement;
+const practiceStartBtn = document.getElementById('practice-start-btn');
+const practicePlayer = document.getElementById('practice-player');
+const testStartBtn = document.getElementById('test-start-btn');
+const testPlayer = document.getElementById('test-player');
 
 console.log('audio element:', audio);
 console.log('audio source:', audioSource);
@@ -13,6 +35,16 @@ console.log('audio source:', audioSource);
 audio.addEventListener('error', (e) => {
   console.error('audio error event:', audio.error);
 });
+
+let practiceFiles = [];
+let currentPracticeFile = null;
+let clipAudio = null;
+let testFiles = [];
+let currentTestFile = null;
+let testClipAudio = null;
+let testCorrectCount = 0;
+let testCurrentCount = 0;
+let testTotalCount = 10;
 
 async function loadCategories() {
   const grade = gradeSelect.value;
@@ -106,11 +138,313 @@ async function loadTree() {
   }
 }
 
+async function loadPracticeFiles() {
+  const grade = gradeSelect.value;
+  const semester = semesterSelect.value;
+  const category = categorySelect.value;
+
+  if (!category) {
+    practiceStatus.textContent = 'no category selected';
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/files/${grade}/${semester}/${category}`);
+    let files = await response.json();
+
+    const filterText = idFilterInput.value.trim();
+    if (filterText) {
+      const allowedIds = filterText.split(',').map(s => s.trim());
+      files = files.filter(f => allowedIds.includes(f.trackId));
+    }
+
+    practiceFiles = files;
+    if (files.length === 0) {
+      practiceStatus.textContent = 'no matching files found';
+    }
+  } catch (error) {
+    console.error('error loading practice files:', error);
+    practiceStatus.textContent = 'error loading files';
+  }
+}
+
+async function playNextClip() {
+  if (practiceFiles.length === 0) {
+    practiceStatus.textContent = 'no files available';
+    return;
+  }
+
+  const randomIdx = Math.floor(Math.random() * practiceFiles.length);
+  currentPracticeFile = practiceFiles[randomIdx];
+
+  const grade = gradeSelect.value;
+  const semester = semesterSelect.value;
+  const category = categorySelect.value;
+  const duration = durationInput.value;
+
+  practiceStatus.textContent = `playing... (id: ${currentPracticeFile.trackId})`;
+  feedback.textContent = '';
+  guessInput.value = '';
+  guessInput.disabled = false;
+  guessBtn.disabled = false;
+  pauseBtn.textContent = 'pause';
+  pauseBtn.style.display = 'inline-block';
+  practiceStartBtn.style.display = 'none';
+  guessInput.focus();
+
+  try {
+    const response = await fetch(
+      `/api/clip/${grade}/${semester}/${category}/${encodeURIComponent(currentPracticeFile.filename)}?duration=${duration}`
+    );
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    clipAudio = new Audio(url);
+
+    clipAudio.play();
+    clipAudio.onended = () => {
+      if (guessInput.value === '') {
+        guessInput.placeholder = 'enter your guess';
+        guessInput.focus();
+      }
+    };
+  } catch (error) {
+    console.error('error playing clip:', error);
+    practiceStatus.textContent = 'error playing clip';
+  }
+}
+
+function submitGuess() {
+  const guess = guessInput.value.trim();
+  if (!guess) return;
+
+  const isCorrect = guess === currentPracticeFile.trackId;
+  if (isCorrect) {
+    feedback.textContent = `correct! id: ${currentPracticeFile.trackId}`;
+    feedback.style.color = '#0a0';
+  } else {
+    feedback.textContent = `wrong — correct id was ${currentPracticeFile.trackId}`;
+    feedback.style.color = '#a00';
+  }
+
+  guessInput.disabled = true;
+  guessBtn.disabled = true;
+  if (clipAudio) clipAudio.pause();
+
+  setTimeout(() => {
+    playNextClip();
+  }, 1500);
+}
+
+async function loadTestFiles() {
+  const grade = gradeSelect.value;
+  const semester = semesterSelect.value;
+  const category = categorySelect.value;
+
+  if (!category) {
+    testStatus.textContent = 'no category selected';
+    return;
+  }
+
+  try {
+    const response = await fetch(`/api/files/${grade}/${semester}/${category}`);
+    let files = await response.json();
+
+    const filterText = testIdFilterInput.value.trim();
+    if (filterText) {
+      const allowedIds = filterText.split(',').map(s => s.trim());
+      files = files.filter(f => allowedIds.includes(f.trackId));
+    }
+
+    testFiles = files;
+    testTotalCount = parseInt(testCountInput.value) || 10;
+    testCorrectCount = 0;
+    testCurrentCount = 0;
+
+    if (files.length === 0) {
+      testStatus.textContent = 'no matching files found';
+    }
+  } catch (error) {
+    console.error('error loading test files:', error);
+    testStatus.textContent = 'error loading files';
+  }
+}
+
+async function playNextTestClip() {
+  testCurrentCount++;
+  if (testCurrentCount > testTotalCount || testFiles.length === 0) {
+    showTestResults();
+    return;
+  }
+
+  const randomIdx = Math.floor(Math.random() * testFiles.length);
+  currentTestFile = testFiles[randomIdx];
+
+  const grade = gradeSelect.value;
+  const semester = semesterSelect.value;
+  const category = categorySelect.value;
+  const duration = testDurationInput.value;
+
+  testStatus.textContent = `playing... (id: ${currentTestFile.trackId})`;
+  testProgress.textContent = `song ${testCurrentCount} of ${testTotalCount}`;
+  testFeedback.textContent = '';
+  testGuessInput.value = '';
+  testGuessInput.disabled = false;
+  testGuessInput.style.display = 'block';
+  testGuessBtn.disabled = false;
+  testGuessBtn.style.display = 'block';
+  testResults.style.display = 'none';
+  testGuessInput.focus();
+
+  try {
+    const response = await fetch(
+      `/api/clip/${grade}/${semester}/${category}/${encodeURIComponent(currentTestFile.filename)}?duration=${duration}`
+    );
+    const blob = await response.blob();
+    const url = URL.createObjectURL(blob);
+    testClipAudio = new Audio(url);
+
+    testClipAudio.play();
+    testClipAudio.onended = () => {
+      if (testGuessInput.value === '') {
+        testGuessInput.placeholder = 'enter your guess';
+        testGuessInput.focus();
+      }
+    };
+  } catch (error) {
+    console.error('error playing clip:', error);
+    testStatus.textContent = 'error playing clip';
+  }
+}
+
+function submitTestGuess() {
+  const guess = testGuessInput.value.trim();
+  if (!guess) return;
+
+  const isCorrect = guess === currentTestFile.trackId;
+  if (isCorrect) {
+    testFeedback.textContent = `correct! id: ${currentTestFile.trackId}`;
+    testFeedback.style.color = '#0a0';
+    testCorrectCount++;
+  } else {
+    testFeedback.textContent = `wrong — correct id was ${currentTestFile.trackId}`;
+    testFeedback.style.color = '#a00';
+  }
+
+  testGuessInput.disabled = true;
+  testGuessBtn.disabled = true;
+  if (testClipAudio) testClipAudio.pause();
+
+  setTimeout(() => {
+    playNextTestClip();
+  }, 1500);
+}
+
+function showTestResults() {
+  testStatus.textContent = 'test complete!';
+  testProgress.textContent = '';
+  testGuessInput.style.display = 'none';
+  testGuessBtn.style.display = 'none';
+  testFeedback.textContent = '';
+
+  testResults.innerHTML = `
+    <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">results</div>
+    <div>correct: ${testCorrectCount} / ${testTotalCount}</div>
+  `;
+  testResults.style.display = 'block';
+}
+
 gradeSelect.addEventListener('change', loadCategories);
 semesterSelect.addEventListener('change', loadCategories);
-categorySelect.addEventListener('change', loadTree);
-modeSelect.addEventListener('change', () => {
-  console.log('mode changed to:', modeSelect.value);
+categorySelect.addEventListener('change', () => {
+  if (modeSelect.value === 'practice') {
+    loadPracticeFiles();
+  } else if (modeSelect.value === 'test') {
+    loadTestFiles();
+  } else {
+    loadTree();
+  }
 });
+modeSelect.addEventListener('change', async () => {
+  audio.pause();
+  if (clipAudio) clipAudio.pause();
+  if (testClipAudio) testClipAudio.pause();
+
+  const mode = modeSelect.value;
+  if (mode === 'practice') {
+    treeContainer.style.display = 'none';
+    practiceMode.style.display = 'block';
+    testMode.style.display = 'none';
+    practicePlayer.style.display = 'none';
+    await loadPracticeFiles();
+  } else if (mode === 'test') {
+    treeContainer.style.display = 'none';
+    practiceMode.style.display = 'none';
+    testMode.style.display = 'block';
+    testPlayer.style.display = 'none';
+    await loadTestFiles();
+  } else {
+    practiceMode.style.display = 'none';
+    testMode.style.display = 'none';
+    treeContainer.style.display = 'block';
+    loadTree();
+  }
+});
+
+guessBtn.addEventListener('click', submitGuess);
+guessInput.addEventListener('keypress', (e) => {
+  if (e.key === 'enter') submitGuess();
+});
+
+pauseBtn.addEventListener('click', () => {
+  if (clipAudio.paused) {
+    clipAudio.play();
+    pauseBtn.textContent = 'pause';
+  } else {
+    clipAudio.pause();
+    pauseBtn.textContent = 'resume';
+  }
+});
+
+testGuessBtn.addEventListener('click', submitTestGuess);
+testGuessInput.addEventListener('keypress', (e) => {
+  if (e.key === 'enter') submitTestGuess();
+});
+
+practiceStartBtn.addEventListener('click', async () => {
+  await loadPracticeFiles();
+  practicePlayer.style.display = 'block';
+  pauseBtn.style.display = 'none';
+  practiceStartBtn.style.display = 'inline-block';
+  playNextClip();
+});
+
+testStartBtn.addEventListener('click', async () => {
+  await loadTestFiles();
+  testPlayer.style.display = 'block';
+  playNextTestClip();
+});
+
+idFilterInput.addEventListener('change', loadPracticeFiles);
+testIdFilterInput.addEventListener('change', loadTestFiles);
+testCountInput.addEventListener('change', () => {
+  testTotalCount = parseInt(testCountInput.value) || 10;
+});
+
+// Initialize display based on initial mode
+if (modeSelect.value === 'practice') {
+  treeContainer.style.display = 'none';
+  practiceMode.style.display = 'block';
+  testMode.style.display = 'none';
+  practicePlayer.style.display = 'none';
+} else if (modeSelect.value === 'test') {
+  treeContainer.style.display = 'none';
+  practiceMode.style.display = 'none';
+  testMode.style.display = 'block';
+  testPlayer.style.display = 'none';
+} else {
+  treeContainer.style.display = 'block';
+  practiceMode.style.display = 'none';
+  testMode.style.display = 'none';
+}
 
 loadCategories();

@@ -33,6 +33,61 @@
       <select id="category"></select>
     </div>
     <div id="tree"></div>
+    <div id="practice-mode" style="display: none;">
+      <div class="practice-controls">
+        <div class="control-row">
+          <label>duration (seconds)</label>
+          <input id="duration-input" type="number" min="5" max="60" value="30">
+        </div>
+        <div class="control-row">
+          <label>track ids filter</label>
+          <input id="id-filter-input" type="text" placeholder="e.g., 01,02,03">
+        </div>
+        <div class="control-row">
+          <button id="practice-start-btn">start</button>
+          <button id="pause-btn" style="display: none;">pause</button>
+        </div>
+      </div>
+      <div id="practice-player" style="display: none;">
+        <div class="practice-info">
+          <div id="practice-status">loading...</div>
+        </div>
+        <div class="practice-input">
+          <input id="guess-input" type="text" placeholder="enter track id" disabled>
+          <button id="guess-btn" disabled>guess</button>
+        </div>
+        <div id="feedback" style="margin-top: 10px;"></div>
+      </div>
+    </div>
+    <div id="test-mode" style="display: none;">
+      <div class="practice-controls">
+        <div class="control-row">
+          <label>duration (seconds)</label>
+          <input id="test-duration-input" type="number" min="5" max="60" value="30">
+        </div>
+        <div class="control-row">
+          <label>number of songs</label>
+          <input id="test-count-input" type="number" min="1" max="100" value="10">
+        </div>
+        <div class="control-row">
+          <label>track ids filter</label>
+          <input id="test-id-filter-input" type="text" placeholder="e.g., 01,02,03">
+        </div>
+        <button id="test-start-btn">start</button>
+      </div>
+      <div id="test-player" style="display: none;">
+        <div class="practice-info">
+          <div id="test-status">loading...</div>
+          <div id="test-progress" style="margin-top: 5px; font-size: 12px;"></div>
+        </div>
+        <div class="practice-input">
+          <input id="test-guess-input" type="text" placeholder="enter track id" disabled>
+          <button id="test-guess-btn" disabled>guess</button>
+        </div>
+        <div id="test-feedback" style="margin-top: 10px;"></div>
+        <div id="test-results" style="display: none; margin-top: 15px; padding: 10px; background: #f5f5f5; border-radius: 4px;"></div>
+      </div>
+    </div>
   </div>
   <div class="pane">
     <div id="player">
