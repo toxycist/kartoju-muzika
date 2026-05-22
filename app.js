@@ -360,6 +360,7 @@ function showTestResults() {
   testGuessInput.style.display = 'none';
   testGuessBtn.style.display = 'none';
   testFeedback.textContent = '';
+  testStartBtn.style.display = 'block';
 
   testResults.innerHTML = `
     <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">results</div>
@@ -390,6 +391,8 @@ modeSelect.addEventListener('change', async () => {
     practiceMode.style.display = 'none';
     testMode.style.display = 'block';
     testPlayer.style.display = 'none';
+    testStartBtn.style.display = 'block';
+    testResults.style.display = 'none';
     loadTree();
     await loadTestFiles();
   } else {
@@ -432,6 +435,8 @@ modeSelect.addEventListener('change', async () => {
     practiceMode.style.display = 'none';
     testMode.style.display = 'block';
     testPlayer.style.display = 'none';
+    testStartBtn.style.display = 'block';
+    testResults.style.display = 'none';
     loadTree();
     await loadTestFiles();
   } else {
@@ -471,6 +476,7 @@ practiceStartBtn.addEventListener('click', async () => {
 });
 
 testStartBtn.addEventListener('click', async () => {
+  testStartBtn.style.display = 'none';
   await loadTestFiles();
   testPlayer.style.display = 'block';
   playNextTestClip();
