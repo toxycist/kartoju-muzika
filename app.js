@@ -24,6 +24,7 @@ const testResults = document.getElementById('test-results');
 const audioSource = document.getElementById('audio-source');
 const nowPlaying = document.getElementById('now-playing');
 const audio = audioSource.parentElement;
+const player = document.getElementById('player');
 const practiceStartBtn = document.getElementById('practice-start-btn');
 const practicePlayer = document.getElementById('practice-player');
 const testStartBtn = document.getElementById('test-start-btn');
@@ -371,13 +372,15 @@ modeSelect.addEventListener('change', async () => {
 
   const mode = modeSelect.value;
   if (mode === 'practice') {
-    treeContainer.style.display = 'none';
+    player.style.display = 'none';
     practiceMode.style.display = 'block';
     testMode.style.display = 'none';
     practicePlayer.style.display = 'none';
+    pauseBtn.style.display = 'none';
+    practiceStartBtn.style.display = 'inline-block';
     await loadPracticeFiles();
   } else if (mode === 'test') {
-    treeContainer.style.display = 'none';
+    player.style.display = 'none';
     practiceMode.style.display = 'none';
     testMode.style.display = 'block';
     testPlayer.style.display = 'none';
@@ -385,7 +388,7 @@ modeSelect.addEventListener('change', async () => {
   } else {
     practiceMode.style.display = 'none';
     testMode.style.display = 'none';
-    treeContainer.style.display = 'block';
+    player.style.display = 'block';
     loadTree();
   }
 });
@@ -432,19 +435,19 @@ testCountInput.addEventListener('change', () => {
 
 // Initialize display based on initial mode
 if (modeSelect.value === 'practice') {
-  treeContainer.style.display = 'none';
+  player.style.display = 'none';
   practiceMode.style.display = 'block';
   testMode.style.display = 'none';
   practicePlayer.style.display = 'none';
 } else if (modeSelect.value === 'test') {
-  treeContainer.style.display = 'none';
+  player.style.display = 'none';
   practiceMode.style.display = 'none';
   testMode.style.display = 'block';
   testPlayer.style.display = 'none';
 } else {
-  treeContainer.style.display = 'block';
   practiceMode.style.display = 'none';
   testMode.style.display = 'none';
+  player.style.display = 'block';
 }
 
 loadCategories();
