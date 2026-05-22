@@ -30,6 +30,7 @@ const player = document.getElementById('player');
 const practiceStartBtn = document.getElementById('practice-start-btn');
 const practicePlayer = document.getElementById('practice-player');
 const testStartBtn = document.getElementById('test-start-btn');
+const testStopBtn = document.getElementById('test-stop-btn');
 const testPlayer = document.getElementById('test-player');
 
 console.log('audio element:', audio);
@@ -355,12 +356,17 @@ function submitTestGuess() {
 }
 
 function showTestResults() {
-  testStatus.textContent = 'test complete!';
+  testStatus.textContent = 'test complete';
   testProgress.textContent = '';
   testGuessInput.style.display = 'none';
   testGuessBtn.style.display = 'none';
   testFeedback.textContent = '';
   testStartBtn.style.display = 'block';
+  testStopBtn.style.display = 'none';
+  testDurationInput.disabled = false;
+  testCountInput.disabled = false;
+  testIdFilterInput.disabled = false;
+  testForceStartInput.disabled = false;
 
   testResults.innerHTML = `
     <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">results</div>
@@ -384,6 +390,7 @@ modeSelect.addEventListener('change', async () => {
     practicePlayer.style.display = 'none';
     pauseBtn.style.display = 'none';
     practiceStartBtn.style.display = 'inline-block';
+    testStopBtn.style.display = 'none';
     loadTree();
     await loadPracticeFiles();
   } else if (mode === 'test') {
@@ -393,12 +400,22 @@ modeSelect.addEventListener('change', async () => {
     testPlayer.style.display = 'none';
     testStartBtn.style.display = 'block';
     testResults.style.display = 'none';
+    testStopBtn.style.display = 'none';
+    testDurationInput.disabled = false;
+    testCountInput.disabled = false;
+    testIdFilterInput.disabled = false;
+    testForceStartInput.disabled = false;
     loadTree();
     await loadTestFiles();
   } else {
     practiceMode.style.display = 'none';
     testMode.style.display = 'none';
     player.style.display = 'block';
+    testStopBtn.style.display = 'none';
+    testDurationInput.disabled = false;
+    testCountInput.disabled = false;
+    testIdFilterInput.disabled = false;
+    testForceStartInput.disabled = false;
     loadTree();
   }
 });
@@ -428,6 +445,7 @@ modeSelect.addEventListener('change', async () => {
     practicePlayer.style.display = 'none';
     pauseBtn.style.display = 'none';
     practiceStartBtn.style.display = 'inline-block';
+    testStopBtn.style.display = 'none';
     loadTree();
     await loadPracticeFiles();
   } else if (mode === 'test') {
@@ -437,12 +455,22 @@ modeSelect.addEventListener('change', async () => {
     testPlayer.style.display = 'none';
     testStartBtn.style.display = 'block';
     testResults.style.display = 'none';
+    testStopBtn.style.display = 'none';
+    testDurationInput.disabled = false;
+    testCountInput.disabled = false;
+    testIdFilterInput.disabled = false;
+    testForceStartInput.disabled = false;
     loadTree();
     await loadTestFiles();
   } else {
     practiceMode.style.display = 'none';
     testMode.style.display = 'none';
     player.style.display = 'block';
+    testStopBtn.style.display = 'none';
+    testDurationInput.disabled = false;
+    testCountInput.disabled = false;
+    testIdFilterInput.disabled = false;
+    testForceStartInput.disabled = false;
     loadTree();
   }
 });
@@ -477,9 +505,19 @@ practiceStartBtn.addEventListener('click', async () => {
 
 testStartBtn.addEventListener('click', async () => {
   testStartBtn.style.display = 'none';
+  testStopBtn.style.display = 'block';
+  testDurationInput.disabled = true;
+  testCountInput.disabled = true;
+  testIdFilterInput.disabled = true;
+  testForceStartInput.disabled = true;
   await loadTestFiles();
   testPlayer.style.display = 'block';
   playNextTestClip();
+});
+
+testStopBtn.addEventListener('click', () => {
+  if (testClipAudio) testClipAudio.pause();
+  showTestResults();
 });
 
 idFilterInput.addEventListener('change', loadPracticeFiles);
