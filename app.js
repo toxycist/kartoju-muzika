@@ -52,6 +52,25 @@ function normalizeId(id) {
   return String(parseInt(id) || 0);
 }
 
+function parseFilterIds(filterText) {
+  const parts = filterText.split(',');
+  const ids = [];
+
+  parts.forEach(part => {
+    part = part.trim();
+    if (part.includes('-')) {
+      const [start, end] = part.split('-').map(s => parseInt(s.trim()) || 0);
+      for (let i = Math.min(start, end); i <= Math.max(start, end); i++) {
+        ids.push(String(i));
+      }
+    } else if (part) {
+      ids.push(normalizeId(part));
+    }
+  });
+
+  return ids;
+}
+
 async function loadCategories() {
   const grade = gradeSelect.value;
   const semester = semesterSelect.value;
@@ -161,7 +180,7 @@ async function loadPracticeFiles() {
 
     const filterText = idFilterInput.value.trim();
     if (filterText) {
-      const allowedIds = filterText.split(',').map(s => normalizeId(s.trim()));
+      const allowedIds = parseFilterIds(filterText);
       files = files.filter(f => allowedIds.includes(normalizeId(f.trackId)));
     }
 
@@ -189,7 +208,7 @@ async function playNextClip() {
   const category = categorySelect.value;
   const duration = durationInput.value;
 
-  const forceStartIds = forceStartInput.value.trim().split(',').map(s => normalizeId(s.trim()));
+  const forceStartIds = parseFilterIds(forceStartInput.value.trim());
   const forceStart = forceStartIds.includes(normalizeId(currentPracticeFile.trackId));
 
   feedback.textContent = '';
@@ -262,7 +281,7 @@ async function loadTestFiles() {
 
     const filterText = testIdFilterInput.value.trim();
     if (filterText) {
-      const allowedIds = filterText.split(',').map(s => normalizeId(s.trim()));
+      const allowedIds = parseFilterIds(filterText);
       files = files.filter(f => allowedIds.includes(normalizeId(f.trackId)));
     }
 
