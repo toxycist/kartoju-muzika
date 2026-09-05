@@ -3,28 +3,42 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>kartoju muzika</title>
-  <link rel="stylesheet" href="styles.css">
+  <title>kartoju muziką</title>
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
+  <header class="masthead">
+    <h1 class="masthead-title">kartoju muziką</h1>
+    <div id="theme-switcher" class="theme-switcher">
+      <label for="theme-select">theme</label>
+      <select id="theme-select"></select>
+    </div>
+  </header>
+
   <div class="pane">
     <div class="controls">
-      <label>grade</label>
-      <select id="grade">
-        <option>1</option>
-        <option>2</option>
-        <option>3</option>
-        <option>4</option>
-      </select>
-      <label>semester</label>
-      <select id="semester">
-        <option>1</option>
-        <option>2</option>
-      </select>
-      <label>category</label>
-      <select id="category"></select>
-    </div>
-    <div id="tree"></div>
+        <div class="field">
+          <label for="grade">grade</label>
+          <select id="grade">
+            <option>1</option>
+            <option>2</option>
+            <option>3</option>
+            <option>4</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="semester">semester</label>
+          <select id="semester">
+            <option>1</option>
+            <option>2</option>
+          </select>
+        </div>
+        <div class="field field-grow">
+          <label for="category">category</label>
+          <select id="category"></select>
+        </div>
+      </div>
+      <div id="tree" class="tree"></div>
   </div>
   <div class="pane">
     <div class="controls">
@@ -102,6 +116,7 @@
     </div>
   </div>
 
-  <script src="app.js"></script>
+  <script src="/theme-switcher.js"></script>
+  <script src="/app.js"></script>
 </body>
 </html>

@@ -1,10 +1,14 @@
+// DOM references
 const modeSelect = document.getElementById('mode');
 const gradeSelect = document.getElementById('grade');
 const semesterSelect = document.getElementById('semester');
 const categorySelect = document.getElementById('category');
 const treeContainer = document.getElementById('tree');
+
 const practiceMode = document.getElementById('practice-mode');
 const testMode = document.getElementById('test-mode');
+const player = document.getElementById('player');
+
 const durationInput = document.getElementById('duration-input');
 const idFilterInput = document.getElementById('id-filter-input');
 const forceStartInput = document.getElementById('force-start-input');
@@ -12,6 +16,9 @@ const guessInput = document.getElementById('guess-input');
 const guessBtn = document.getElementById('guess-btn');
 const pauseBtn = document.getElementById('pause-btn');
 const feedback = document.getElementById('feedback');
+const practiceStartBtn = document.getElementById('practice-start-btn');
+const practicePlayer = document.getElementById('practice-player');
+
 const testDurationInput = document.getElementById('test-duration-input');
 const testCountInput = document.getElementById('test-count-input');
 const testIdFilterInput = document.getElementById('test-id-filter-input');
@@ -21,49 +28,37 @@ const testGuessBtn = document.getElementById('test-guess-btn');
 const testFeedback = document.getElementById('test-feedback');
 const testProgress = document.getElementById('test-progress');
 const testResults = document.getElementById('test-results');
-const audioSource = document.getElementById('audio-source');
-const nowPlaying = document.getElementById('now-playing');
-const audio = audioSource.parentElement;
-const player = document.getElementById('player');
-const practiceStartBtn = document.getElementById('practice-start-btn');
-const practicePlayer = document.getElementById('practice-player');
 const testStartBtn = document.getElementById('test-start-btn');
 const testStopBtn = document.getElementById('test-stop-btn');
 const testPlayer = document.getElementById('test-player');
 
-console.log('audio element:', audio);
-console.log('audio source:', audioSource);
+const audioSource = document.getElementById('audio-source');
+const nowPlaying = document.getElementById('now-playing');
+const audio = audioSource.parentElement;
 
-audio.addEventListener('error', (e) => {
+audio.addEventListener('error', () => {
   console.error('audio error event:', audio.error);
 });
 
-let practiceFiles = [];
-let currentPracticeFile = null;
-let clipAudio = null;
-let testFiles = [];
-let currentTestFile = null;
-let testClipAudio = null;
-let testCorrectCount = 0;
-let testCurrentCount = 0;
-let testTotalCount = 10;
-
+// helpers
 function normalizeId(id) {
   return String(parseInt(id) || 0);
 }
 
+/** parses "3, 5-8, 12" style strings into an array of normalized id strings */
 function parseFilterIds(filterText) {
-  const parts = filterText.split(',');
   const ids = [];
 
-  parts.forEach(part => {
-    part = part.trim();
+  filterText.split(',').forEach(rawPart => {
+    const part = rawPart.trim();
+    if (!part) return;
+
     if (part.includes('-')) {
       const [start, end] = part.split('-').map(s => parseInt(s.trim()) || 0);
       for (let i = Math.min(start, end); i <= Math.max(start, end); i++) {
         ids.push(String(i));
       }
-    } else if (part) {
+    } else {
       ids.push(normalizeId(part));
     }
   });
@@ -71,9 +66,62 @@ function parseFilterIds(filterText) {
   return ids;
 }
 
+function currentSelection() {
+  return {
+    grade: gradeSelect.value,
+    semester: semesterSelect.value,
+    category: categorySelect.value,
+  };
+}
+
+/** fetches the file list for the current grade/semester/category and applies an id filter */
+async function fetchFilteredFiles(filterInputValue) {
+  const { grade, semester, category } = currentSelection();
+  const response = await fetch(`/api/files/${grade}/${semester}/${category}`);
+  let files = await response.json();
+
+  const filterText = filterInputValue.trim();
+  if (filterText) {
+    const allowedIds = parseFilterIds(filterText);
+    files = files.filter(f => allowedIds.includes(normalizeId(f.trackId)));
+  }
+
+  return files;
+}
+
+/** fetches an audio clip for a file and returns a playable object URL */
+async function fetchClipUrl(file, durationValue, forceStartInputValue) {
+  const { grade, semester, category } = currentSelection();
+  const forceStartIds = parseFilterIds(forceStartInputValue.trim());
+  const forceStart = forceStartIds.includes(normalizeId(file.trackId));
+
+  const response = await fetch(
+    `/api/clip/${grade}/${semester}/${category}/${encodeURIComponent(file.filename)}` +
+    `?duration=${durationValue}&forceStart=${forceStart}`
+  );
+  const blob = await response.blob();
+  return URL.createObjectURL(blob);
+}
+
+function stopAllAudio() {
+  audio.pause();
+  stopClip(practiceSession);
+  stopClip(testSession);
+}
+
+/** stops and discards currently playing clip and bumps its token to prevent multiple clips overlapping */
+function stopClip(session) {
+  if (session.clipAudio) {
+    session.clipAudio.pause();
+    session.clipAudio = null;
+  }
+  session.token = (session.token || 0) + 1;
+  return session.token;
+}
+
+// file tree (learning mode)
 async function loadCategories() {
-  const grade = gradeSelect.value;
-  const semester = semesterSelect.value;
+  const { grade, semester } = currentSelection();
 
   try {
     const response = await fetch(`/api/categories/${grade}/${semester}`);
@@ -125,11 +173,8 @@ function renderTree(items, level = 0, path = '') {
       if (item.type === 'file' && isLearningMode) {
         li.style.cursor = 'pointer';
         li.addEventListener('click', () => {
-          const grade = gradeSelect.value;
-          const semester = semesterSelect.value;
-          const category = categorySelect.value;
+          const { grade, semester, category } = currentSelection();
           const filePath = `/music_files/grade_${grade}/semester_${semester}/${category}${itemPath}`;
-          console.log('playing:', filePath);
           audioSource.src = filePath;
           audio.load();
           nowPlaying.textContent = `now playing: ${item.name}`;
@@ -145,9 +190,7 @@ function renderTree(items, level = 0, path = '') {
 }
 
 async function loadTree() {
-  const grade = gradeSelect.value;
-  const semester = semesterSelect.value;
-  const category = categorySelect.value;
+  const { grade, semester, category } = currentSelection();
 
   if (!category) {
     treeContainer.innerHTML = '';
@@ -164,28 +207,24 @@ async function loadTree() {
   }
 }
 
-async function loadPracticeFiles() {
-  const grade = gradeSelect.value;
-  const semester = semesterSelect.value;
-  const category = categorySelect.value;
+// practice mode
+const practiceSession = {
+  files: [],
+  currentFile: null,
+  clipAudio: null,
+  token: 0,
+  clipEnded: false,
+};
 
-  if (!category) {
+async function loadPracticeFiles() {
+  if (!categorySelect.value) {
     feedback.textContent = 'no category selected';
     return;
   }
 
   try {
-    const response = await fetch(`/api/files/${grade}/${semester}/${category}`);
-    let files = await response.json();
-
-    const filterText = idFilterInput.value.trim();
-    if (filterText) {
-      const allowedIds = parseFilterIds(filterText);
-      files = files.filter(f => allowedIds.includes(normalizeId(f.trackId)));
-    }
-
-    practiceFiles = files;
-    if (files.length === 0) {
+    practiceSession.files = await fetchFilteredFiles(idFilterInput.value);
+    if (practiceSession.files.length === 0) {
       feedback.textContent = 'no matching files found';
     }
   } catch (error) {
@@ -195,21 +234,16 @@ async function loadPracticeFiles() {
 }
 
 async function playNextClip() {
-  if (practiceFiles.length === 0) {
+  if (practiceSession.files.length === 0) {
     feedback.textContent = 'no files available';
     return;
   }
 
-  const randomIdx = Math.floor(Math.random() * practiceFiles.length);
-  currentPracticeFile = practiceFiles[randomIdx];
+  const randomIdx = Math.floor(Math.random() * practiceSession.files.length);
+  practiceSession.currentFile = practiceSession.files[randomIdx];
 
-  const grade = gradeSelect.value;
-  const semester = semesterSelect.value;
-  const category = categorySelect.value;
-  const duration = durationInput.value;
-
-  const forceStartIds = parseFilterIds(forceStartInput.value.trim());
-  const forceStart = forceStartIds.includes(normalizeId(currentPracticeFile.trackId));
+  // get a new token
+  const token = stopClip(practiceSession);
 
   feedback.textContent = '';
   guessInput.value = '';
@@ -217,19 +251,25 @@ async function playNextClip() {
   guessBtn.disabled = false;
   pauseBtn.textContent = 'pause';
   pauseBtn.style.display = 'inline-block';
+  pauseBtn.disabled = false;
   practiceStartBtn.style.display = 'none';
+  practiceSession.clipEnded = false;
   guessInput.focus();
 
   try {
-    const response = await fetch(
-      `/api/clip/${grade}/${semester}/${category}/${encodeURIComponent(currentPracticeFile.filename)}?duration=${duration}&forceStart=${forceStart}`
-    );
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    clipAudio = new Audio(url);
+    const url = await fetchClipUrl(practiceSession.currentFile, durationInput.value, forceStartInput.value);
 
-    clipAudio.play();
-    clipAudio.onended = () => {
+    // check if the token hasn't expired
+    if (token !== practiceSession.token) {
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    practiceSession.clipAudio = new Audio(url);
+    practiceSession.clipAudio.play();
+    practiceSession.clipAudio.onended = () => {
+      practiceSession.clipEnded = true;
+      pauseBtn.disabled = true;
       if (guessInput.value === '') {
         guessInput.placeholder = 'enter your guess';
         guessInput.focus();
@@ -245,52 +285,61 @@ function submitGuess() {
   const guess = guessInput.value.trim();
   if (!guess) return;
 
-  const isCorrect = normalizeId(guess) === normalizeId(currentPracticeFile.trackId);
+  const isCorrect = normalizeId(guess) === normalizeId(practiceSession.currentFile.trackId);
   if (isCorrect) {
-    feedback.textContent = `correct! id: ${currentPracticeFile.trackId}`;
+    feedback.textContent = `correct! id: ${practiceSession.currentFile.trackId}`;
     feedback.style.color = '#0a0';
     guessInput.disabled = true;
     guessBtn.disabled = true;
-    if (clipAudio) clipAudio.pause();
+    stopClip(practiceSession);
 
-    setTimeout(() => {
-      playNextClip();
-    }, 1500);
+    setTimeout(playNextClip, 1500);
+  } else if (practiceSession.clipEnded) {
+    feedback.textContent = `wrong - correct id was ${practiceSession.currentFile.trackId}`;
+    feedback.style.color = '#a00';
+    guessInput.disabled = true;
+    guessBtn.disabled = true;
+    stopClip(practiceSession);
+
+    setTimeout(playNextClip, 1500);
   } else {
-    feedback.textContent = `wrong, try again`;
+    feedback.textContent = 'wrong, try again';
     feedback.style.color = '#a00';
     guessInput.value = '';
     guessInput.focus();
   }
 }
 
-async function loadTestFiles() {
-  const grade = gradeSelect.value;
-  const semester = semesterSelect.value;
-  const category = categorySelect.value;
+// test mode
+const testSession = {
+  files: [],
+  currentFile: null,
+  clipAudio: null,
+  correctCount: 0,
+  currentCount: 0,
+  totalCount: 10,
+  token: 0,
+  nextClipTimeoutId: null,
+};
 
-  if (!category) {
+async function loadTestFiles() {
+  if (!categorySelect.value) {
     testFeedback.textContent = 'no category selected';
     testResults.style.display = 'none';
     return;
   }
 
   try {
-    const response = await fetch(`/api/files/${grade}/${semester}/${category}`);
-    let files = await response.json();
-
-    const filterText = testIdFilterInput.value.trim();
-    if (filterText) {
-      const allowedIds = parseFilterIds(filterText);
-      files = files.filter(f => allowedIds.includes(normalizeId(f.trackId)));
+    testSession.files = await fetchFilteredFiles(testIdFilterInput.value);
+    testSession.totalCount = parseInt(testCountInput.value) || 10;
+    testSession.correctCount = 0;
+    testSession.currentCount = 0;
+    if (testSession.nextClipTimeoutId !== null) {
+      clearTimeout(testSession.nextClipTimeoutId);
+      testSession.nextClipTimeoutId = null;
     }
 
-    testFiles = files;
-    testTotalCount = parseInt(testCountInput.value) || 10;
-    testCorrectCount = 0;
-    testCurrentCount = 0;
-
-    if (files.length === 0) {
+    if (testSession.files.length === 0) {
       testFeedback.textContent = 'no matching files found';
       testResults.style.display = 'none';
     }
@@ -302,24 +351,19 @@ async function loadTestFiles() {
 }
 
 async function playNextTestClip() {
-  testCurrentCount++;
-  if (testCurrentCount > testTotalCount || testFiles.length === 0) {
+  testSession.currentCount++;
+  if (testSession.currentCount > testSession.totalCount || testSession.files.length === 0) {
     showTestResults();
     return;
   }
 
-  const randomIdx = Math.floor(Math.random() * testFiles.length);
-  currentTestFile = testFiles[randomIdx];
+  const randomIdx = Math.floor(Math.random() * testSession.files.length);
+  testSession.currentFile = testSession.files[randomIdx];
 
-  const grade = gradeSelect.value;
-  const semester = semesterSelect.value;
-  const category = categorySelect.value;
-  const duration = testDurationInput.value;
+  // get a new token
+  const token = stopClip(testSession);
 
-  const forceStartIds = testForceStartInput.value.trim().split(',').map(s => normalizeId(s.trim()));
-  const forceStart = forceStartIds.includes(normalizeId(currentTestFile.trackId));
-
-  testProgress.textContent = `song ${testCurrentCount} of ${testTotalCount}`;
+  testProgress.textContent = `song ${testSession.currentCount} of ${testSession.totalCount}`;
   testFeedback.textContent = '';
   testGuessInput.value = '';
   testGuessInput.disabled = false;
@@ -330,15 +374,17 @@ async function playNextTestClip() {
   testGuessInput.focus();
 
   try {
-    const response = await fetch(
-      `/api/clip/${grade}/${semester}/${category}/${encodeURIComponent(currentTestFile.filename)}?duration=${duration}&forceStart=${forceStart}`
-    );
-    const blob = await response.blob();
-    const url = URL.createObjectURL(blob);
-    testClipAudio = new Audio(url);
+    const url = await fetchClipUrl(testSession.currentFile, testDurationInput.value, testForceStartInput.value);
 
-    testClipAudio.play();
-    testClipAudio.onended = () => {
+    // check if the token hasn't expired
+    if (token !== testSession.token) {
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    testSession.clipAudio = new Audio(url);
+    testSession.clipAudio.play();
+    testSession.clipAudio.onended = () => {
       if (testGuessInput.value === '') {
         testGuessInput.placeholder = 'enter your guess';
         testGuessInput.focus();
@@ -354,23 +400,28 @@ function submitTestGuess() {
   const guess = testGuessInput.value.trim();
   if (!guess) return;
 
-  const isCorrect = normalizeId(guess) === normalizeId(currentTestFile.trackId);
+  const isCorrect = normalizeId(guess) === normalizeId(testSession.currentFile.trackId);
   if (isCorrect) {
-    testFeedback.textContent = `correct! id: ${currentTestFile.trackId}`;
+    testFeedback.textContent = `correct! id: ${testSession.currentFile.trackId}`;
     testFeedback.style.color = '#0a0';
-    testCorrectCount++;
+    testSession.correctCount++;
   } else {
-    testFeedback.textContent = `wrong — correct id was ${currentTestFile.trackId}`;
+    testFeedback.textContent = `wrong — correct id was ${testSession.currentFile.trackId}`;
     testFeedback.style.color = '#a00';
   }
 
   testGuessInput.disabled = true;
   testGuessBtn.disabled = true;
-  if (testClipAudio) testClipAudio.pause();
+  stopClip(testSession);
 
-  setTimeout(() => {
-    playNextTestClip();
-  }, 1500);
+  testSession.nextClipTimeoutId = setTimeout(playNextTestClip, 1500);
+}
+
+function setTestControlsDisabled(disabled) {
+  testDurationInput.disabled = disabled;
+  testCountInput.disabled = disabled;
+  testIdFilterInput.disabled = disabled;
+  testForceStartInput.disabled = disabled;
 }
 
 function showTestResults() {
@@ -380,7 +431,7 @@ function showTestResults() {
     testFeedback.textContent = '';
     testResults.innerHTML = `
       <div style="font-size: 16px; font-weight: bold; margin-bottom: 10px;">results</div>
-      <div>correct: ${testCorrectCount} / ${testTotalCount}</div>
+      <div>correct: ${testSession.correctCount} / ${testSession.totalCount}</div>
     `;
     testResults.style.display = 'block';
   }
@@ -390,110 +441,47 @@ function showTestResults() {
   testGuessBtn.style.display = 'none';
   testStartBtn.style.display = 'block';
   testStopBtn.style.display = 'none';
-  testDurationInput.disabled = false;
-  testCountInput.disabled = false;
-  testIdFilterInput.disabled = false;
-  testForceStartInput.disabled = false;
+  setTestControlsDisabled(false);
 }
 
-gradeSelect.addEventListener('change', loadCategories);
-semesterSelect.addEventListener('change', loadCategories);
-modeSelect.addEventListener('change', async () => {
-  audio.pause();
-  if (clipAudio) clipAudio.pause();
-  if (testClipAudio) testClipAudio.pause();
+// mode switching
+async function applyMode(mode) {
+  stopAllAudio();
 
-  const mode = modeSelect.value;
+  player.style.display = mode === 'learning' ? 'block' : 'none';
+  practiceMode.style.display = mode === 'practice' ? 'block' : 'none';
+  testMode.style.display = mode === 'test' ? 'block' : 'none';
+  testStopBtn.style.display = 'none';
+  setTestControlsDisabled(false);
+
   if (mode === 'practice') {
-    player.style.display = 'none';
-    practiceMode.style.display = 'block';
-    testMode.style.display = 'none';
     practicePlayer.style.display = 'none';
     pauseBtn.style.display = 'none';
     practiceStartBtn.style.display = 'inline-block';
-    testStopBtn.style.display = 'none';
+    practiceStartBtn.disabled = false;
     loadTree();
     await loadPracticeFiles();
   } else if (mode === 'test') {
-    player.style.display = 'none';
-    practiceMode.style.display = 'none';
-    testMode.style.display = 'block';
     testPlayer.style.display = 'none';
     testStartBtn.style.display = 'block';
     testResults.style.display = 'none';
-    testStopBtn.style.display = 'none';
-    testDurationInput.disabled = false;
-    testCountInput.disabled = false;
-    testIdFilterInput.disabled = false;
-    testForceStartInput.disabled = false;
     loadTree();
     await loadTestFiles();
   } else {
-    practiceMode.style.display = 'none';
-    testMode.style.display = 'none';
-    player.style.display = 'block';
-    testStopBtn.style.display = 'none';
-    testDurationInput.disabled = false;
-    testCountInput.disabled = false;
-    testIdFilterInput.disabled = false;
-    testForceStartInput.disabled = false;
     loadTree();
   }
-});
+}
+
+// event listeners
+gradeSelect.addEventListener('change', loadCategories);
+semesterSelect.addEventListener('change', loadCategories);
+modeSelect.addEventListener('change', () => applyMode(modeSelect.value));
 
 categorySelect.addEventListener('change', async () => {
   const mode = modeSelect.value;
-  if (mode === 'practice') {
-    loadTree();
-    await loadPracticeFiles();
-  } else if (mode === 'test') {
-    loadTree();
-    await loadTestFiles();
-  } else {
-    loadTree();
-  }
-});
-modeSelect.addEventListener('change', async () => {
-  audio.pause();
-  if (clipAudio) clipAudio.pause();
-  if (testClipAudio) testClipAudio.pause();
-
-  const mode = modeSelect.value;
-  if (mode === 'practice') {
-    player.style.display = 'none';
-    practiceMode.style.display = 'block';
-    testMode.style.display = 'none';
-    practicePlayer.style.display = 'none';
-    pauseBtn.style.display = 'none';
-    practiceStartBtn.style.display = 'inline-block';
-    testStopBtn.style.display = 'none';
-    loadTree();
-    await loadPracticeFiles();
-  } else if (mode === 'test') {
-    player.style.display = 'none';
-    practiceMode.style.display = 'none';
-    testMode.style.display = 'block';
-    testPlayer.style.display = 'none';
-    testStartBtn.style.display = 'block';
-    testResults.style.display = 'none';
-    testStopBtn.style.display = 'none';
-    testDurationInput.disabled = false;
-    testCountInput.disabled = false;
-    testIdFilterInput.disabled = false;
-    testForceStartInput.disabled = false;
-    loadTree();
-    await loadTestFiles();
-  } else {
-    practiceMode.style.display = 'none';
-    testMode.style.display = 'none';
-    player.style.display = 'block';
-    testStopBtn.style.display = 'none';
-    testDurationInput.disabled = false;
-    testCountInput.disabled = false;
-    testIdFilterInput.disabled = false;
-    testForceStartInput.disabled = false;
-    loadTree();
-  }
+  loadTree();
+  if (mode === 'practice') await loadPracticeFiles();
+  else if (mode === 'test') await loadTestFiles();
 });
 
 guessBtn.addEventListener('click', submitGuess);
@@ -502,11 +490,12 @@ guessInput.addEventListener('keypress', (e) => {
 });
 
 pauseBtn.addEventListener('click', () => {
-  if (clipAudio.paused) {
-    clipAudio.play();
+  if (!practiceSession.clipAudio || practiceSession.clipEnded) return;
+  if (practiceSession.clipAudio.paused) {
+    practiceSession.clipAudio.play();
     pauseBtn.textContent = 'pause';
   } else {
-    clipAudio.pause();
+    practiceSession.clipAudio.pause();
     pauseBtn.textContent = 'resume';
   }
 });
@@ -517,51 +506,50 @@ testGuessInput.addEventListener('keypress', (e) => {
 });
 
 practiceStartBtn.addEventListener('click', async () => {
-  await loadPracticeFiles();
-  practicePlayer.style.display = 'block';
-  pauseBtn.style.display = 'none';
-  practiceStartBtn.style.display = 'inline-block';
-  playNextClip();
+  if (practiceStartBtn.disabled) return;
+  practiceStartBtn.disabled = true;
+  try {
+    await loadPracticeFiles();
+    practicePlayer.style.display = 'block';
+    pauseBtn.style.display = 'none';
+    practiceStartBtn.style.display = 'inline-block';
+    await playNextClip();
+  } finally {
+    practiceStartBtn.disabled = false;
+  }
 });
 
 testStartBtn.addEventListener('click', async () => {
   testStartBtn.style.display = 'none';
   testStopBtn.style.display = 'block';
-  testDurationInput.disabled = true;
-  testCountInput.disabled = true;
-  testIdFilterInput.disabled = true;
-  testForceStartInput.disabled = true;
+  setTestControlsDisabled(true);
   await loadTestFiles();
   testPlayer.style.display = 'block';
   playNextTestClip();
 });
 
 testStopBtn.addEventListener('click', () => {
-  if (testClipAudio) testClipAudio.pause();
+  // cancel any queued playNextTestClip call
+  if (testSession.nextClipTimeoutId !== null) {
+    clearTimeout(testSession.nextClipTimeoutId);
+    testSession.nextClipTimeoutId = null;
+  }
+  // stops current playback AND invalidates all tokens
+  stopClip(testSession);
   showTestResults();
 });
 
 idFilterInput.addEventListener('change', loadPracticeFiles);
 testIdFilterInput.addEventListener('change', loadTestFiles);
 testCountInput.addEventListener('change', () => {
-  testTotalCount = parseInt(testCountInput.value) || 10;
+  testSession.totalCount = parseInt(testCountInput.value) || 10;
 });
 
-// Initialize display based on initial mode
-if (modeSelect.value === 'practice') {
-  player.style.display = 'none';
-  practiceMode.style.display = 'block';
-  testMode.style.display = 'none';
-  practicePlayer.style.display = 'none';
-} else if (modeSelect.value === 'test') {
-  player.style.display = 'none';
-  practiceMode.style.display = 'none';
-  testMode.style.display = 'block';
-  testPlayer.style.display = 'none';
-} else {
-  practiceMode.style.display = 'none';
-  testMode.style.display = 'none';
-  player.style.display = 'block';
-}
+// init
+player.style.display = modeSelect.value === 'learning' ? 'block' : 'none';
+practiceMode.style.display = modeSelect.value === 'practice' ? 'block' : 'none';
+testMode.style.display = modeSelect.value === 'test' ? 'block' : 'none';
+practicePlayer.style.display = 'none';
+testPlayer.style.display = 'none';
 
 loadCategories();

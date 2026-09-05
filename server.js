@@ -5,12 +5,77 @@ const ffmpeg = require('fluent-ffmpeg');
 
 const app = express();
 const baseDir = path.join(__dirname, 'music_files');
+const themesDir = path.join(__dirname, 'themes');
 
 ffmpeg.setFfmpegPath('/usr/sbin/ffmpeg');
 
+// --- theme resolution -----------------------------------------------------
+// A "theme" is any folder under /themes that contains an index.html. This
+// keeps the menu automatic: dropping a new folder with index.html + styles.css
+// in there is enough to make it selectable, no server changes needed.
+
+function listThemes() {
+  if (!fs.existsSync(themesDir)) return [];
+  return fs.readdirSync(themesDir, { withFileTypes: true })
+    .filter(entry => entry.isDirectory())
+    .map(entry => entry.name)
+    .filter(name => fs.existsSync(path.join(themesDir, name, 'index.html')))
+    .sort();
+}
+
+function getCookieTheme(req) {
+  const cookieHeader = req.headers.cookie || '';
+  const match = cookieHeader.match(/(?:^|;\s*)theme=([^;]+)/);
+  return match ? decodeURIComponent(match[1]) : null;
+}
+
+function resolveTheme(req) {
+  const themes = listThemes();
+  if (themes.length === 0) return null;
+
+  const requested = getCookieTheme(req);
+  if (requested && themes.includes(requested)) return requested;
+
+  return themes.includes('dark') ? 'dark' : themes[0];
+}
+
+app.get('/api/themes', (req, res) => {
+  res.json(listThemes());
+});
+
+app.get('/api/theme/:name', (req, res) => {
+  const themes = listThemes();
+  if (!themes.includes(req.params.name)) {
+    return res.status(400).json({ error: 'unknown theme' });
+  }
+
+  res.setHeader(
+    'Set-Cookie',
+    `theme=${encodeURIComponent(req.params.name)}; Path=/; Max-Age=31536000; SameSite=Lax`
+  );
+  res.redirect('/');
+});
+
+app.get(['/', '/index.html'], (req, res) => {
+  const theme = resolveTheme(req);
+  if (!theme) {
+    return res.status(500).send('no themes available in /themes');
+  }
+  res.sendFile(path.join(themesDir, theme, 'index.html'));
+});
+
+app.get('/styles.css', (req, res) => {
+  const theme = resolveTheme(req);
+  if (!theme) {
+    return res.status(404).send('not found');
+  }
+  res.sendFile(path.join(themesDir, theme, 'styles.css'));
+});
+
+// --- static assets shared across all themes (app.js, theme-switcher.js, music files) ---
 app.use(express.static(__dirname, {
-  setHeaders: (res, path) => {
-    if (path.endsWith('.mp3')) {
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.mp3')) {
       res.set('Content-Type', 'audio/mpeg');
     }
   }
@@ -141,4 +206,3 @@ app.get('/api/tree/:grade/:semester/:category?', (req, res) => {
 });
 
 app.listen(3000, () => console.log('server running on http://localhost:3000'));
-

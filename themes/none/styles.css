@@ -9,6 +9,21 @@ body {
   height: 100vh;
   display: grid;
   grid-template-columns: 1fr 1fr;
+  grid-template-rows: auto 1fr;
+}
+
+.masthead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 18px 28px 16px;
+  border-bottom: 1px solid #ccc;
+  grid-column: 1 / -1;
+}
+
+.theme-switcher {
+  margin-left: auto;
 }
 
 .pane {
@@ -23,19 +38,27 @@ body {
 
 .controls {
   display: flex;
-  gap: 10px;
+  flex-wrap: wrap;
+  gap: 16px;
+  align-items: flex-end;
   margin-bottom: 20px;
-  align-items: center;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #ccc;
 }
 
-.controls:first-of-type {
-  border-bottom: 1px solid #ddd;
-  padding-bottom: 15px;
-  margin-bottom: 15px;
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.field-grow {
+  flex: 1;
+  min-width: 140px;
 }
 
 label {
-  margin-right: 5px;
+  font-size: 12.5px;
 }
 
 select {
@@ -46,24 +69,39 @@ select {
   list-style: none;
   padding-left: 0;
 }
-
+ 
 #tree li {
   padding: 5px 0;
 }
-
+ 
 #tree li.folder {
   cursor: pointer;
 }
-
+ 
 #tree li.folder > .folder-label::before {
   content: '▼ ';
   margin-right: 3px;
 }
-
+ 
 #tree li.folder.collapsed > .folder-label::before {
   content: '▶ ';
 }
-
+ 
+#tree li.file {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+ 
+#tree .folder-label {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  vertical-align: top;
+}
+ 
 #tree ul.collapsed {
   display: none;
 }
@@ -184,4 +222,23 @@ select {
 #feedback {
   font-size: 14px;
   font-weight: bold;
+}
+
+@media (max-width: 820px) {
+  body {
+    grid-template-columns: 1fr;
+  }
+
+  .pane {
+    border-right: none;
+    border-bottom: 1px solid #ccc;
+  }
+
+  .control-row label {
+    min-width: 105px;
+  }
+
+  .masthead {
+    flex-wrap: wrap;
+  }
 }
