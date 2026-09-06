@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+
 :root {
   --bg: #050807;
   --panel: #0a100c;
@@ -27,7 +29,7 @@ html {
 
 body {
   position: relative;
-  height: 100vh;
+  min-height: 100vh;
   background: var(--bg);
   color: var(--text);
   font-family: var(--font-mono);
@@ -71,23 +73,20 @@ body::after {
   padding: 18px 28px 16px;
   border-bottom: 1px solid var(--border);
   background: var(--panel);
-  font-size: 15px;
-}
-
-.prompt {
-  color: var(--phosphor);
-  font-weight: 600;
-}
-
-.prompt-sep {
-  color: var(--text-dim);
-  margin-right: 10px;
+  font-size: 10px;
 }
 
 .masthead-title {
-  color: var(--phosphor-bright);
-  text-shadow: 0 0 10px rgba(107, 255, 168, 0.45);
-  letter-spacing: 0.5px;
+  color: transparent;
+  text-shadow: none;
+}
+
+/* fake shell prompt, generated instead of separate <span>s */
+.masthead-title::before {
+  content: 'root@kartoju_muzika:~$ ';
+  color: var(--phosphor);
+  font-weight: 550;
+  text-shadow: none;
 }
 
 .theme-switcher {
@@ -99,55 +98,60 @@ body::after {
 
 .theme-switcher label {
   font-size: 12.5px;
-  color: var(--text-muted);
+  color: var(--text-dim);
 }
 
 /* ---------- layout ---------- */
 
-.term-grid {
+.layout {
   display: grid;
   grid-template-columns: 1fr 1fr;
   min-height: 0;
-  overflow: hidden;
 }
 
-.term-window {
+.pane {
   display: flex;
   flex-direction: column;
   min-height: 0;
-  min-width: 0;
+  min-width: 0; /* prevents grid blowout from long unbreakable tree text */
+  padding: 20px 26px 30px;
+  overflow: auto;
   border-right: 1px solid var(--border);
 }
 
-.term-window:last-child {
+.pane:last-child {
   border-right: none;
 }
 
-.term-bar {
-  display: flex;
-  justify-content: space-between;
+/* fake terminal window title bar, generated per-pane instead of a
+   dedicated .term-bar element; negative margins bleed it to the pane's
+   edges since it's meant to look like window chrome, not page content */
+.pane::before {
+  display: block;
+  flex-shrink: 0;
+  order: -1;
+  margin: -20px -26px 16px -26px;
   padding: 8px 16px;
   background: var(--panel-line);
   border-bottom: 1px solid var(--border);
   font-size: 12px;
-  color: var(--text-dim);
-}
-
-.term-bar-path {
   color: var(--phosphor);
 }
 
-.term-body {
-  padding: 20px 26px 30px;
-  overflow: auto;
-  flex: 1;
+.layout .pane:nth-of-type(1)::before {
+  content: '~/tree';
+}
+
+.layout .pane:nth-of-type(2)::before {
+  content: '~/session';
 }
 
 /* ---------- controls / fields ---------- */
+
 .controls {
   display: flex;
   flex-wrap: wrap;
-  gap: 16px;
+  gap: 18px;
   align-items: flex-end;
   margin-bottom: 20px;
   padding-bottom: 16px;
@@ -171,8 +175,8 @@ body::after {
 }
 
 label {
-  font-size: 12.5px;
-  color: var(--text-muted);
+  font-size: 12px;
+  color: var(--text-dim);
 }
 
 select,
@@ -222,37 +226,37 @@ select:disabled {
 .tree {
   font-size: 13.5px;
 }
- 
+
 .tree ul {
   list-style: none;
   padding-left: 16px;
 }
- 
+
 .tree li {
   padding: 4px 0;
   color: var(--text-dim);
 }
- 
+
 .tree li.folder {
   cursor: pointer;
   color: var(--phosphor);
 }
- 
+
 .tree li.folder > .folder-label::before {
   content: '[-] ';
   color: var(--phosphor-dim);
 }
- 
+
 .tree li.folder.collapsed > .folder-label::before {
   content: '[+] ';
 }
- 
+
 .tree li.file {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
- 
+
 .tree .folder-label {
   display: inline-block;
   max-width: 100%;
@@ -261,12 +265,12 @@ select:disabled {
   white-space: nowrap;
   vertical-align: top;
 }
- 
+
 .tree li.file::before {
   content: '> ';
   color: var(--phosphor-dim);
 }
- 
+
 .tree ul.collapsed {
   display: none;
 }
@@ -330,7 +334,7 @@ select:disabled {
 
 /* ---------- bracket buttons ---------- */
 
-.btn-term,
+button,
 #practice-start-btn,
 #test-start-btn,
 #test-stop-btn {
@@ -347,7 +351,21 @@ select:disabled {
   transition: background-color 0.12s ease, color 0.12s ease;
 }
 
-.btn-term:hover,
+button::before,
+#practice-start-btn::before,
+#test-start-btn::before,
+#test-stop-btn::before {
+  content: '[ ';
+}
+
+button::after,
+#practice-start-btn::after,
+#test-start-btn::after,
+#test-stop-btn::after {
+  content: ' ]';
+}
+
+button:hover,
 #practice-start-btn:hover,
 #test-start-btn:hover,
 #test-stop-btn:hover {
@@ -356,26 +374,21 @@ select:disabled {
   border-color: var(--phosphor);
 }
 
-.btn-term:active,
+button:active,
 #practice-start-btn:active,
 #test-start-btn:active,
 #test-stop-btn:active {
   background: var(--phosphor-bright);
 }
 
-.btn-term-quiet {
+.btn-quiet {
   color: var(--amber);
   border-color: var(--amber);
 }
 
-.btn-term-quiet:hover {
+.btn-quiet:hover {
   background: var(--amber);
   color: #1a0f00;
-}
-
-#test-start-btn,
-#test-stop-btn {
-  margin-top: 4px;
 }
 
 button:disabled {
@@ -384,31 +397,17 @@ button:disabled {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .btn-term,
-  #practice-start-btn,
-  #test-start-btn,
-  #test-stop-btn {
+  button {
     transition: none;
   }
 }
 
 /* ---------- practice / test player ---------- */
 
-.practice-player {
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
-}
-
 .practice-input {
   display: flex;
   gap: 8px;
   align-items: center;
-}
-
-.input-caret {
-  color: var(--phosphor);
-  font-weight: 700;
 }
 
 #guess-input,
@@ -450,11 +449,11 @@ button:disabled {
 /* ---------- responsive ---------- */
 
 @media (max-width: 820px) {
-  .term-grid {
+  .layout {
     grid-template-columns: 1fr;
   }
 
-  .term-window {
+  .pane {
     border-right: none;
     border-bottom: 1px solid var(--border);
   }

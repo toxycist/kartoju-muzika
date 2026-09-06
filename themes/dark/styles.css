@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
   --bg: #16181d;
   --panel: #1b1e24;
@@ -24,7 +26,7 @@ html {
 }
 
 body {
-  height: 100vh;
+  min-height: 100vh;
   display: grid;
   grid-template-rows: auto 1fr;
   background: var(--bg);
@@ -68,14 +70,12 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   min-height: 0;
-  overflow: hidden;
 }
 
 .pane {
   padding: 22px 28px 32px;
   overflow: auto;
   border-right: 1px solid var(--border);
-  min-height: 0;
 }
 
 .pane:last-child {
@@ -129,8 +129,8 @@ select {
   appearance: none;
   background-image: linear-gradient(45deg, transparent 50%, var(--text-muted) 50%),
     linear-gradient(135deg, var(--text-muted) 50%, transparent 50%);
-  background-position: calc(100% - 12px) 14px, calc(100% - 6px) 14px;
-  background-size: 5px 5px, 5px 5px;
+  background-position: calc(100% - 8px) 12px, calc(100% - 2px) 12px;
+  background-size: 6px 6px, 6px 6px;
   background-repeat: no-repeat;
 }
 
@@ -157,38 +157,38 @@ select:disabled {
 .tree {
   font-size: 14px;
 }
- 
+
 .tree ul {
   list-style: none;
   padding-left: 18px;
 }
- 
+
 .tree li {
   padding: 5px 0;
   color: var(--text);
 }
- 
+
 .tree li.folder {
   cursor: pointer;
 }
- 
+
 .tree li.folder > .folder-label::before {
   content: '\25be';
   display: inline-block;
   margin-right: 6px;
   color: var(--text-muted);
 }
- 
+
 .tree li.folder.collapsed > .folder-label::before {
   content: '\25b8';
 }
- 
+
 .tree li.file {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
- 
+
 .tree .folder-label {
   display: inline-block;
   max-width: 100%;
@@ -197,14 +197,14 @@ select:disabled {
   white-space: nowrap;
   vertical-align: top;
 }
- 
+
 .tree ul.collapsed {
   display: none;
 }
 
 /* ---------- listening player ---------- */
 
-#player {
+.listening-player {
   padding: 14px 16px;
   background: var(--panel);
   border: 1px solid var(--border);
@@ -260,13 +260,13 @@ button:hover {
   background: var(--accent-hover);
 }
 
-.btn-secondary {
+.btn-quiet {
   background: transparent;
   color: var(--text);
   border: 1px solid var(--border);
 }
 
-.btn-secondary:hover {
+.btn-quiet:hover {
   background: var(--panel);
 }
 
@@ -297,21 +297,20 @@ button:disabled {
   font-size: 15px;
 }
 
-#feedback,
-#test-feedback {
+.feedback {
   margin-top: 10px;
   font-size: 14px;
   font-weight: 600;
   min-height: 20px;
 }
 
-#test-progress {
+.test-progress {
   margin-bottom: 8px;
   font-size: 13px;
   color: var(--text-muted);
 }
 
-#test-results {
+.test-results {
   margin-top: 12px;
   padding: 14px 16px;
   background: var(--panel);

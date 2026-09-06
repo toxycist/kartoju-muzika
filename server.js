@@ -10,16 +10,16 @@ const themesDir = path.join(__dirname, 'themes');
 ffmpeg.setFfmpegPath('/usr/sbin/ffmpeg');
 
 // --- theme resolution -----------------------------------------------------
-// A "theme" is any folder under /themes that contains an index.html. This
-// keeps the menu automatic: dropping a new folder with index.html + styles.css
-// in there is enough to make it selectable, no server changes needed.
+// A "theme" is now just a folder under /themes containing a styles.css.
+// index.html is shared and never changes; only which stylesheet gets
+// served at /styles.css changes.
 
 function listThemes() {
   if (!fs.existsSync(themesDir)) return [];
   return fs.readdirSync(themesDir, { withFileTypes: true })
     .filter(entry => entry.isDirectory())
     .map(entry => entry.name)
-    .filter(name => fs.existsSync(path.join(themesDir, name, 'index.html')))
+    .filter(name => fs.existsSync(path.join(themesDir, name, 'styles.css')))
     .sort();
 }
 
@@ -56,14 +56,6 @@ app.get('/api/theme/:name', (req, res) => {
   res.redirect('/');
 });
 
-app.get(['/', '/index.html'], (req, res) => {
-  const theme = resolveTheme(req);
-  if (!theme) {
-    return res.status(500).send('no themes available in /themes');
-  }
-  res.sendFile(path.join(themesDir, theme, 'index.html'));
-});
-
 app.get('/styles.css', (req, res) => {
   const theme = resolveTheme(req);
   if (!theme) {
@@ -72,7 +64,7 @@ app.get('/styles.css', (req, res) => {
   res.sendFile(path.join(themesDir, theme, 'styles.css'));
 });
 
-// --- static assets shared across all themes (app.js, theme-switcher.js, music files) ---
+// --- everything else (index.html, app.js, theme-switcher.js, music files) is static ---
 app.use(express.static(__dirname, {
   setHeaders: (res, filePath) => {
     if (filePath.endsWith('.mp3')) {
@@ -205,4 +197,4 @@ app.get('/api/tree/:grade/:semester/:category?', (req, res) => {
   res.json(buildTree(folderPath));
 });
 
-app.listen(3000, () => console.log('server running on http://localhost:3000'));
+app.listen(1717, () => console.log('server running on http://localhost:1717'));

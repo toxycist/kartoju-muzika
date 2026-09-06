@@ -36,6 +36,8 @@ const audioSource = document.getElementById('audio-source');
 const nowPlaying = document.getElementById('now-playing');
 const audio = audioSource.parentElement;
 
+const BASE_PATH = ''
+
 audio.addEventListener('error', () => {
   console.error('audio error event:', audio.error);
 });
@@ -77,7 +79,7 @@ function currentSelection() {
 /** fetches the file list for the current grade/semester/category and applies an id filter */
 async function fetchFilteredFiles(filterInputValue) {
   const { grade, semester, category } = currentSelection();
-  const response = await fetch(`/api/files/${grade}/${semester}/${category}`);
+  const response = await fetch(`${BASE_PATH}/api/files/${grade}/${semester}/${category}`);
   let files = await response.json();
 
   const filterText = filterInputValue.trim();
@@ -96,7 +98,7 @@ async function fetchClipUrl(file, durationValue, forceStartInputValue) {
   const forceStart = forceStartIds.includes(normalizeId(file.trackId));
 
   const response = await fetch(
-    `/api/clip/${grade}/${semester}/${category}/${encodeURIComponent(file.filename)}` +
+    `${BASE_PATH}/api/clip/${grade}/${semester}/${category}/${encodeURIComponent(file.filename)}` +
     `?duration=${durationValue}&forceStart=${forceStart}`
   );
   const blob = await response.blob();
@@ -124,7 +126,7 @@ async function loadCategories() {
   const { grade, semester } = currentSelection();
 
   try {
-    const response = await fetch(`/api/categories/${grade}/${semester}`);
+    const response = await fetch(`${BASE_PATH}/api/categories/${grade}/${semester}`);
     const categories = await response.json();
     categorySelect.innerHTML = '';
     categories.forEach(category => {
@@ -174,7 +176,7 @@ function renderTree(items, level = 0, path = '') {
         li.style.cursor = 'pointer';
         li.addEventListener('click', () => {
           const { grade, semester, category } = currentSelection();
-          const filePath = `/music_files/grade_${grade}/semester_${semester}/${category}${itemPath}`;
+          const filePath = `${BASE_PATH}/music_files/grade_${grade}/semester_${semester}/${category}${itemPath}`;
           audioSource.src = filePath;
           audio.load();
           nowPlaying.textContent = `now playing: ${item.name}`;
@@ -198,7 +200,7 @@ async function loadTree() {
   }
 
   try {
-    const response = await fetch(`/api/tree/${grade}/${semester}/${category}`);
+    const response = await fetch(`${BASE_PATH}/api/tree/${grade}/${semester}/${category}`);
     const data = await response.json();
     treeContainer.innerHTML = '';
     treeContainer.appendChild(renderTree(data));

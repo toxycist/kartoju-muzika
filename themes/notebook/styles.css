@@ -1,3 +1,5 @@
+@import url('https://fonts.googleapis.com/css2?family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;0,7..72,600;1,7..72,400;1,7..72,500&family=Inter:wght@400;500;600;700&display=swap');
+
 :root {
   --paper: #efebdd;
   --paper-dark: #e4dfce;
@@ -26,7 +28,7 @@ html {
 }
 
 body {
-  height: 100vh;
+  min-height: 100vh;
   display: grid;
   grid-template-rows: auto 1fr;
   background: var(--paper);
@@ -47,6 +49,20 @@ body {
   background: linear-gradient(var(--paper), var(--paper) 96%, var(--paper-line));
 }
 
+.masthead-title {
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 22px;
+  letter-spacing: 0.2px;
+  color: var(--ink);
+}
+
+.masthead-title::before {
+  content: '\266b';
+  margin-right: 8px;
+  color: var(--rule-red);
+}
+
 .theme-switcher {
   margin-left: auto;
   display: flex;
@@ -56,21 +72,7 @@ body {
 
 .theme-switcher label {
   font-size: 12.5px;
-  color: var(--text-muted);
-}
-
-.masthead-mark {
-  font-size: 20px;
-  color: var(--rule-red);
-  transform: translateY(1px);
-}
-
-.masthead-title {
-  font-family: var(--font-display);
-  font-weight: 500;
-  font-size: 22px;
-  letter-spacing: 0.2px;
-  color: var(--ink);
+  color: var(--muted);
 }
 
 /* ---------- layout ---------- */
@@ -79,24 +81,25 @@ body {
   display: grid;
   grid-template-columns: 1fr 1fr;
   min-height: 0;
-  overflow: hidden;
 }
 
 .pane {
   position: relative;
   padding: 22px 28px 32px;
   overflow: auto;
-  min-height: 0;
 }
 
-.pane-browse {
+/* the browse pane (first) gets the red rule + faint ruled-paper texture;
+   the player pane (second) stays plain - done with :nth-of-type instead
+   of a dedicated class, since the markup no longer distinguishes them */
+.layout .pane:nth-of-type(1) {
   border-right: 3px solid var(--rule-red);
 }
 
-.pane-browse::before {
+.layout .pane:nth-of-type(1)::before {
   content: '';
   position: absolute;
-  inset: 0 0 0 0;
+  inset: 0;
   pointer-events: none;
   background-image: repeating-linear-gradient(
     to bottom,
@@ -202,23 +205,23 @@ select:disabled {
   position: relative;
   font-size: 14px;
 }
- 
+
 .tree ul {
   list-style: none;
   padding-left: 0;
 }
- 
+
 .tree li {
   padding: 6px 0;
   color: var(--ink-soft);
 }
- 
+
 .tree li.folder {
   cursor: pointer;
   color: var(--ink);
   font-weight: 500;
 }
- 
+
 .tree li.folder > .folder-label::before {
   content: '\25bc';
   display: inline-block;
@@ -227,17 +230,24 @@ select:disabled {
   color: var(--rule-red);
   transform: translateY(-1px);
 }
- 
+
 .tree li.folder.collapsed > .folder-label::before {
   content: '\25b6';
 }
- 
+
 .tree li.file {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
- 
+
+.tree li.file::before {
+  content: '\266a';
+  display: inline-block;
+  width: 18px;
+  color: var(--line-blue);
+}
+
 .tree .folder-label {
   display: inline-block;
   max-width: 100%;
@@ -246,14 +256,7 @@ select:disabled {
   white-space: nowrap;
   vertical-align: top;
 }
- 
-.tree li.file::before {
-  content: '\266a';
-  display: inline-block;
-  width: 18px;
-  color: var(--line-blue);
-}
- 
+
 .tree ul.collapsed {
   display: none;
 }
@@ -312,7 +315,7 @@ select:disabled {
 
 /* ---------- stamp buttons ---------- */
 
-.btn-stamp,
+button,
 #practice-start-btn,
 #test-start-btn,
 #test-stop-btn {
@@ -329,34 +332,29 @@ select:disabled {
   transition: background-color 0.15s ease, transform 0.1s ease;
 }
 
-.btn-stamp:hover,
+button:hover,
 #practice-start-btn:hover,
 #test-start-btn:hover,
 #test-stop-btn:hover {
   background: var(--rule-red);
 }
 
-.btn-stamp:active,
+button:active,
 #practice-start-btn:active,
 #test-start-btn:active,
 #test-stop-btn:active {
   transform: translateY(1px);
 }
 
-.btn-stamp-quiet {
+.btn-quiet {
   background: transparent;
   color: var(--ink);
   border: 1.5px solid var(--ink);
 }
 
-.btn-stamp-quiet:hover {
+.btn-quiet:hover {
   background: var(--ink);
   color: var(--paper);
-}
-
-#test-start-btn,
-#test-stop-btn {
-  margin-top: 4px;
 }
 
 button:disabled {
@@ -365,10 +363,7 @@ button:disabled {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .btn-stamp,
-  #practice-start-btn,
-  #test-start-btn,
-  #test-stop-btn {
+  button {
     transition: none;
   }
 }
@@ -420,12 +415,16 @@ button:disabled {
     grid-template-columns: 1fr;
   }
 
-  .pane-browse {
+  .layout .pane:nth-of-type(1) {
     border-right: none;
     border-bottom: 3px solid var(--rule-red);
   }
 
   .control-row label {
     min-width: 105px;
+  }
+
+  .masthead {
+    flex-wrap: wrap;
   }
 }
