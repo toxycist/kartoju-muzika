@@ -101,6 +101,26 @@ body::after {
   color: var(--text-dim);
 }
 
+.github-link {
+  display: inline-flex;
+  align-self: center;
+  align-items: center;
+  color: var(--text-dim);
+  line-height: 0;
+  transition: color 0.12s ease;
+}
+ 
+.github-link:hover {
+  color: var(--phosphor-bright);
+  filter: drop-shadow(0 0 4px rgba(107, 255, 168, 0.5));
+}
+ 
+.github-link:focus-visible {
+  outline: 1.5px solid var(--phosphor-bright);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
 /* ---------- layout ---------- */
 
 .layout {
