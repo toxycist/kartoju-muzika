@@ -20,6 +20,4 @@ jobs:
             cd www/klausymas/
 
             git pull origin main
-            pm2 stop klausymas
-            npm run all
-            pm2 start klausymas
+            pm2 restart klausymas
