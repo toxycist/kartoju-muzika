@@ -64,6 +64,10 @@ app.get('/styles.css', (req, res) => {
   res.sendFile(path.join(themesDir, theme, 'styles.css'));
 });
 
+app.get('/naujienos.html', (req, res) => {
+  res.sendFile(path.join(__dirname, "naujienos.html"));
+});
+
 // --- everything else (index.html, app.js, theme-switcher.js, music files) is static ---
 app.use(express.static(__dirname, {
   setHeaders: (res, filePath) => {

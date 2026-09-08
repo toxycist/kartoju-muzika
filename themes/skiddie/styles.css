@@ -83,7 +83,7 @@ body::after {
 
 /* fake shell prompt, generated instead of separate <span>s */
 .masthead-title::before {
-  content: 'root@kartoju_muzika:~$ ';
+  content: 'root@klausymas:~$ ';
   color: var(--phosphor);
   font-weight: 550;
   text-shadow: none;
