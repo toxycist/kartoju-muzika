@@ -1,0 +1,25 @@
+name: Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USER }}
+          key: ${{ secrets.SERVER_SSH_KEY }}
+          script: |
+            cd www/klausymas/
+
+            git pull origin main
+            pm2 stop klausymas
+            npm run all
+            pm2 start klausymas
