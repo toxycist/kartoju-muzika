@@ -1,5 +1,4 @@
 /node_modules
-/.venv
-/items
-/"not items"
 /music_files
+/.github
+ecosystem.config.js
