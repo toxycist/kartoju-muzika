@@ -2,3 +2,4 @@
 /music_files
 /.github
 ecosystem.config.js
+.env

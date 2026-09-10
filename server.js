@@ -2,13 +2,13 @@ const express = require('express');
 const fs = require('fs');
 const path = require('path');
 const ffmpeg = require('fluent-ffmpeg');
+require('dotenv').config({quiet: true});
 
 const app = express();
 const baseDir = path.join(__dirname, 'music_files');
 const themesDir = path.join(__dirname, 'themes');
 
-ffmpeg.setFfmpegPath('/usr/sbin/ffmpeg');
-
+ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH);
 // --- theme resolution -----------------------------------------------------
 // A "theme" is now just a folder under /themes containing a styles.css.
 // index.html is shared and never changes; only which stylesheet gets

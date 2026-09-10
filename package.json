@@ -8,6 +8,7 @@
     "all": "npm install && npm start"
   },
   "dependencies": {
+    "dotenv": "^17.4.2",
     "express": "^4.18.2",
     "fluent-ffmpeg": "^2.1.3"
   }
