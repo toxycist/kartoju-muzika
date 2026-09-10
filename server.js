@@ -8,11 +8,13 @@ const app = express();
 const baseDir = path.join(__dirname, 'music_files');
 const themesDir = path.join(__dirname, 'themes');
 
+// Name of the track-group listing file expected in every category folder.
+// Change this if your actual filename differs.
+const GROUPS_FILENAME = 'groups.txt';
+
 ffmpeg.setFfmpegPath(process.env.FFMPEG_PATH);
+
 // --- theme resolution -----------------------------------------------------
-// A "theme" is now just a folder under /themes containing a styles.css.
-// index.html is shared and never changes; only which stylesheet gets
-// served at /styles.css changes.
 
 function listThemes() {
   if (!fs.existsSync(themesDir)) return [];
@@ -77,6 +79,75 @@ app.use(express.static(__dirname, {
   }
 }));
 
+// --- track groups -----------------------------------------------------
+// Each category folder now holds a flat list of .mp3 files plus one
+// GROUPS_FILENAME file that maps track-id ranges to a group name, e.g.:
+//   01-10 operas,
+//   11-15 rock,
+//   16-23 metal
+// Ranges are comma- and/or newline-separated. A single id with no dash
+// (e.g. "24 solo") is also accepted as a one-track group.
+
+function parseGroups(folderPath) {
+  const groupsFilePath = path.join(folderPath, GROUPS_FILENAME);
+  if (!fs.existsSync(groupsFilePath)) return [];
+
+  const raw = fs.readFileSync(groupsFilePath, 'utf8');
+  const entries = raw.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+
+  const groups = [];
+  entries.forEach(entry => {
+    const match = entry.match(/^(\d+)(?:-(\d+))?\s+(.+)$/);
+    if (!match) {
+      console.warn(`skipping unrecognized line in ${groupsFilePath}: "${entry}"`);
+      return;
+    }
+    const start = parseInt(match[1], 10);
+    const end = match[2] ? parseInt(match[2], 10) : start;
+    groups.push({ start, end, name: match[3].trim() });
+  });
+
+  groups.sort((a, b) => a.start - b.start);
+  return groups;
+}
+
+// Builds the tree shape the frontend already expects ({name, type, children}),
+// but the "folders" are virtual groups derived from groups.txt rather than
+// real directories - files themselves are always flat inside folderPath.
+function buildGroupedTree(folderPath) {
+  const groups = parseGroups(folderPath);
+
+  const fileNodes = fs.readdirSync(folderPath)
+    .filter(item => {
+      if (item === GROUPS_FILENAME) return false;
+      const fullPath = path.join(folderPath, item);
+      return fs.statSync(fullPath).isFile() && item.toLowerCase().endsWith('.mp3');
+    })
+    .map(item => {
+      const idMatch = item.match(/^(\d+)/);
+      return { name: item, trackId: idMatch ? parseInt(idMatch[1], 10) : null };
+    })
+    .sort((a, b) => a.name.localeCompare(b.name));
+
+  const groupedNames = new Set();
+
+  const groupNodes = groups.map(group => {
+    const children = fileNodes
+      .filter(f => f.trackId !== null && f.trackId >= group.start && f.trackId <= group.end)
+      .map(f => {
+        groupedNames.add(f.name);
+        return { name: f.name, type: 'file' };
+      });
+    return { name: group.name, type: 'folder', children };
+  }).filter(group => group.children.length > 0);
+
+  const ungroupedNodes = fileNodes
+    .filter(f => !groupedNames.has(f.name))
+    .map(f => ({ name: f.name, type: 'file' }));
+
+  return [...groupNodes, ...ungroupedNodes];
+}
+
 app.get('/api/files/:grade/:semester/:category', (req, res) => {
   const { grade, semester, category } = req.params;
   const folderPath = path.join(baseDir, `grade_${grade}`, `semester_${semester}`, category);
@@ -85,29 +156,22 @@ app.get('/api/files/:grade/:semester/:category', (req, res) => {
     return res.status(404).json({ error: 'folder not found' });
   }
 
-  function findMp3s(dir) {
-    const items = fs.readdirSync(dir);
-    let files = [];
-    items.forEach(item => {
-      const fullPath = path.join(dir, item);
-      const stat = fs.statSync(fullPath);
-      if (stat.isDirectory()) {
-        files = files.concat(findMp3s(fullPath));
-      } else if (item.toLowerCase().endsWith('.mp3')) {
-        const idMatch = item.match(/^(\d+)/);
-        const trackId = idMatch ? idMatch[1] : null;
-        files.push({
-          filename: item,
-          filepath: fullPath,
-          trackId: trackId,
-          relpath: path.relative(folderPath, fullPath)
-        });
-      }
+  const files = fs.readdirSync(folderPath)
+    .filter(item => {
+      if (item === GROUPS_FILENAME) return false;
+      const fullPath = path.join(folderPath, item);
+      return fs.statSync(fullPath).isFile() && item.toLowerCase().endsWith('.mp3');
+    })
+    .map(item => {
+      const idMatch = item.match(/^(\d+)/);
+      return {
+        filename: item,
+        filepath: path.join(folderPath, item),
+        trackId: idMatch ? idMatch[1] : null,
+        relpath: item
+      };
     });
-    return files;
-  }
 
-  const files = findMp3s(folderPath);
   res.json(files);
 });
 
@@ -172,33 +236,28 @@ app.get('/api/categories/:grade/:semester', (req, res) => {
 
 app.get('/api/tree/:grade/:semester/:category?', (req, res) => {
   const { grade, semester, category } = req.params;
-  let folderPath = path.join(baseDir, `grade_${grade}`, `semester_${semester}`);
+  const semesterPath = path.join(baseDir, `grade_${grade}`, `semester_${semester}`);
 
   if (category) {
-    folderPath = path.join(folderPath, category);
+    const categoryPath = path.join(semesterPath, category);
+    if (!fs.existsSync(categoryPath)) {
+      return res.status(404).json({ error: 'folder not found' });
+    }
+    return res.json(buildGroupedTree(categoryPath));
   }
 
-  if (!fs.existsSync(folderPath)) {
+  // No category given: not currently used by the frontend (it always passes
+  // one), kept only so the route still resolves sensibly if called directly.
+  if (!fs.existsSync(semesterPath)) {
     return res.status(404).json({ error: 'folder not found' });
   }
 
-  function buildTree(dir) {
-    const items = fs.readdirSync(dir);
-    return items.map(item => {
-      const fullPath = path.join(dir, item);
-      const stat = fs.statSync(fullPath);
-      return {
-        name: item,
-        type: stat.isDirectory() ? 'folder' : 'file',
-        children: stat.isDirectory() ? buildTree(fullPath) : undefined
-      };
-    }).sort((a, b) => {
-      if (a.type !== b.type) return a.type === 'folder' ? -1 : 1;
-      return a.name.localeCompare(b.name);
-    });
-  }
+  const categoryFolders = fs.readdirSync(semesterPath)
+    .filter(item => fs.statSync(path.join(semesterPath, item)).isDirectory())
+    .sort()
+    .map(name => ({ name, type: 'folder', children: [] }));
 
-  res.json(buildTree(folderPath));
+  res.json(categoryFolders);
 });
 
 app.listen(1717, () => console.log('server running on http://localhost:1717'));
