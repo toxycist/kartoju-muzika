@@ -103,18 +103,18 @@ body::after {
 
 .github-link {
   display: inline-flex;
-  align-self: center;
   align-items: center;
+  align-self: center;
   color: var(--text-dim);
   line-height: 0;
   transition: color 0.12s ease;
 }
- 
+
 .github-link:hover {
   color: var(--phosphor-bright);
   filter: drop-shadow(0 0 4px rgba(107, 255, 168, 0.5));
 }
- 
+
 .github-link:focus-visible {
   outline: 1.5px solid var(--phosphor-bright);
   outline-offset: 2px;
@@ -210,6 +210,33 @@ input[type="number"] {
   border-radius: 2px;
   padding: 7px 9px;
   accent-color: var(--phosphor);
+}
+
+.radio-group {
+  display: flex;
+  gap: 14px;
+  align-items: center;
+  justify-content: flex-start;
+  flex: 0 0 auto;
+}
+
+.radio-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13.5px;
+  color: var(--text);
+  cursor: pointer;
+}
+
+.radio-option input[type="radio"] {
+  accent-color: var(--phosphor);
+  cursor: pointer;
+}
+
+.radio-option input[type="radio"]:focus-visible {
+  outline: 1.5px solid var(--phosphor-bright);
+  outline-offset: 2px;
 }
 
 select {
@@ -339,13 +366,14 @@ select:disabled {
   align-items: center;
 }
 
-.control-row label {
-  min-width: 140px;
-  flex-shrink: 0;
+.control-row > label {
+    min-width: 130px;
+    flex-shrink: 0;
 }
 
-.control-row input {
-  flex: 1;
+.control-row > input {
+    flex: 1;
+    min-width: 0;
 }
 
 .control-row-buttons {

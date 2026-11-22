@@ -89,63 +89,145 @@ app.use(express.static(__dirname, {
 // (e.g. "24 solo") is also accepted as a one-track group.
 
 function parseGroups(folderPath) {
-  const groupsFilePath = path.join(folderPath, GROUPS_FILENAME);
-  if (!fs.existsSync(groupsFilePath)) return [];
+    const groupsFilePath = path.join(folderPath, GROUPS_FILENAME);
 
-  const raw = fs.readFileSync(groupsFilePath, 'utf8');
-  const entries = raw.split(/[,\n]/).map(s => s.trim()).filter(Boolean);
+    if (!fs.existsSync(groupsFilePath)) return [];
 
-  const groups = [];
-  entries.forEach(entry => {
-    const match = entry.match(/^(\d+)(?:-(\d+))?\s+(.+)$/);
-    if (!match) {
-      console.warn(`skipping unrecognized line in ${groupsFilePath}: "${entry}"`);
-      return;
-    }
-    const start = parseInt(match[1], 10);
-    const end = match[2] ? parseInt(match[2], 10) : start;
-    groups.push({ start, end, name: match[3].trim() });
-  });
+    const raw = fs.readFileSync(groupsFilePath, 'utf8');
+    const groups = [];
 
-  groups.sort((a, b) => a.start - b.start);
-  return groups;
+    raw.split(/\r?\n/).forEach((line, index) => {
+        line = line.trim();
+
+        if (!line) return;
+
+        // Format: ranges group_name
+        const match = line.match(/^(.+?)\s+([^,]+)$/);
+
+        if (!match) {
+            console.warn(`skipping invalid line ${index + 1}: "${line}"`);
+            return;
+        }
+
+        const ranges = match[1].split(',');
+        const groupName = match[2].trim();
+
+        const parsedRanges = [];
+
+        for (const range of ranges) {
+            const rangeMatch = range.trim().match(/^(\d+)(?:\s*-\s*(\d+))?$/);
+
+            if (!rangeMatch) {
+                console.warn(
+                    `skipping invalid range on line ${index + 1}: "${range}"`
+                );
+                return;
+            }
+
+            const start = parseInt(rangeMatch[1], 10);
+            const end = rangeMatch[2]
+                ? parseInt(rangeMatch[2], 10)
+                : start;
+
+            parsedRanges.push({
+                start: Math.min(start, end),
+                end: Math.max(start, end),
+                name: groupName
+            });
+        }
+
+        groups.push(...parsedRanges);
+    });
+
+    groups.sort((a, b) => a.start - b.start);
+
+    return groups;
+}
+
+// Given a folder's parsed groups, returns a function that maps a numeric
+// track id to its group name (or null if it doesn't fall in any range).
+function makeGroupLookup(groups) {
+  return (trackIdNum) => {
+    if (trackIdNum === null) return null;
+    const match = groups.find(g => trackIdNum >= g.start && trackIdNum <= g.end);
+    return match ? match.name : null;
+  };
 }
 
 // Builds the tree shape the frontend already expects ({name, type, children}),
 // but the "folders" are virtual groups derived from groups.txt rather than
 // real directories - files themselves are always flat inside folderPath.
 function buildGroupedTree(folderPath) {
-  const groups = parseGroups(folderPath);
+    const groups = parseGroups(folderPath);
 
-  const fileNodes = fs.readdirSync(folderPath)
-    .filter(item => {
-      if (item === GROUPS_FILENAME) return false;
-      const fullPath = path.join(folderPath, item);
-      return fs.statSync(fullPath).isFile() && item.toLowerCase().endsWith('.mp3');
-    })
-    .map(item => {
-      const idMatch = item.match(/^(\d+)/);
-      return { name: item, trackId: idMatch ? parseInt(idMatch[1], 10) : null };
-    })
-    .sort((a, b) => a.name.localeCompare(b.name));
+    const fileNodes = fs.readdirSync(folderPath)
+        .filter(item => {
+            if (item === GROUPS_FILENAME) return false;
 
-  const groupedNames = new Set();
+            const fullPath = path.join(folderPath, item);
 
-  const groupNodes = groups.map(group => {
-    const children = fileNodes
-      .filter(f => f.trackId !== null && f.trackId >= group.start && f.trackId <= group.end)
-      .map(f => {
-        groupedNames.add(f.name);
-        return { name: f.name, type: 'file' };
-      });
-    return { name: group.name, type: 'folder', children };
-  }).filter(group => group.children.length > 0);
+            return fs.statSync(fullPath).isFile() &&
+                item.toLowerCase().endsWith('.mp3');
+        })
+        .map(item => {
+            const idMatch = item.match(/^(\d+)/);
 
-  const ungroupedNodes = fileNodes
-    .filter(f => !groupedNames.has(f.name))
-    .map(f => ({ name: f.name, type: 'file' }));
+            return {
+                name: item,
+                trackId: idMatch ? parseInt(idMatch[1], 10) : null
+            };
+        })
+        .sort((a, b) => a.name.localeCompare(b.name));
 
-  return [...groupNodes, ...ungroupedNodes];
+    // Combine all ranges belonging to the same group.
+    const groupedRanges = new Map();
+
+    groups.forEach(group => {
+        if (!groupedRanges.has(group.name)) {
+            groupedRanges.set(group.name, []);
+        }
+
+        groupedRanges.get(group.name).push(group);
+    });
+
+    const groupedNames = new Set();
+
+    // Create exactly one folder per group name.
+    const groupNodes = [...groupedRanges.entries()].map(([name, ranges]) => {
+        const children = fileNodes
+            .filter(file => {
+                if (file.trackId === null) return false;
+
+                return ranges.some(range =>
+                    file.trackId >= range.start &&
+                    file.trackId <= range.end
+                );
+            })
+            .map(file => {
+                groupedNames.add(file.name);
+
+                return {
+                    name: file.name,
+                    type: 'file'
+                };
+            });
+
+        return {
+            name,
+            type: 'folder',
+            children
+        };
+    }).filter(group => group.children.length > 0);
+
+    // Keep files not belonging to any group at the root.
+    const ungroupedNodes = fileNodes
+        .filter(file => !groupedNames.has(file.name))
+        .map(file => ({
+            name: file.name,
+            type: 'file'
+        }));
+
+    return [...groupNodes, ...ungroupedNodes];
 }
 
 app.get('/api/files/:grade/:semester/:category', (req, res) => {
@@ -156,6 +238,8 @@ app.get('/api/files/:grade/:semester/:category', (req, res) => {
     return res.status(404).json({ error: 'folder not found' });
   }
 
+  const getGroup = makeGroupLookup(parseGroups(folderPath));
+
   const files = fs.readdirSync(folderPath)
     .filter(item => {
       if (item === GROUPS_FILENAME) return false;
@@ -164,11 +248,13 @@ app.get('/api/files/:grade/:semester/:category', (req, res) => {
     })
     .map(item => {
       const idMatch = item.match(/^(\d+)/);
+      const trackIdNum = idMatch ? parseInt(idMatch[1], 10) : null;
       return {
         filename: item,
         filepath: path.join(folderPath, item),
         trackId: idMatch ? idMatch[1] : null,
-        relpath: item
+        relpath: item,
+        group: getGroup(trackIdNum)
       };
     });
 

@@ -78,15 +78,41 @@
         <div class="practice-controls">
           <div class="control-row">
             <label for="duration-input">duration (seconds)</label>
-            <input id="duration-input" type="number" min="5" max="60" value="30">
+            <input id="duration-input" type="number" min="5" max="60" value="30" placeholder="duration of each clip">
           </div>
           <div class="control-row">
             <label for="id-filter-input">track ids filter</label>
-            <input id="id-filter-input" type="text" placeholder="e.g., 01,02,03">
+            <input id="id-filter-input" type="text" placeholder="e.g., '01,02,03', '1-4', '01-04', '01,02,03-5'">
           </div>
           <div class="control-row">
             <label for="force-start-input">force start</label>
-            <input id="force-start-input" type="text" placeholder="e.g., 01,05">
+            <input id="force-start-input" type="text" placeholder="e.g., '01,02,03', '1-4', '01-04', '01,02,03-5'">
+          </div>
+          <div class="control-row">
+            <label>shuffling</label>
+            <div class="radio-group">
+                <label class="radio-option">
+                    <input type="radio" name="practice-shuffle-mode" value="shuffle-bag" checked>
+                    <span>shuffle bag</span>
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="practice-shuffle-mode" value="random">
+                    <span>completely random</span>
+                </label>
+            </div>
+          </div>
+          <div class="control-row">
+            <label>guess by</label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" id="guess-mode-track" name="guess-mode" value="track" checked>
+                <span>track id</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" id="guess-mode-group" name="guess-mode" value="group">
+                <span>group id</span>
+              </label>
+            </div>
           </div>
           <div class="control-row control-row-buttons">
             <button id="practice-start-btn">start</button>
@@ -106,7 +132,7 @@
         <div class="practice-controls">
           <div class="control-row">
             <label for="test-duration-input">duration (seconds)</label>
-            <input id="test-duration-input" type="number" min="5" max="60" value="30">
+            <input id="test-duration-input" type="number" min="5" max="60" value="30" placeholder="duration of each clip">
           </div>
           <div class="control-row">
             <label for="test-count-input">number of songs</label>
@@ -114,11 +140,37 @@
           </div>
           <div class="control-row">
             <label for="test-id-filter-input">track ids filter</label>
-            <input id="test-id-filter-input" type="text" placeholder="e.g., 01,02,03">
+            <input id="test-id-filter-input" type="text" placeholder="e.g., '01,02,03', '1-4', '01-04', '01,02,03-5'">
           </div>
           <div class="control-row">
             <label for="test-force-start-input">force start</label>
-            <input id="test-force-start-input" type="text" placeholder="e.g., 01,05">
+            <input id="test-force-start-input" type="text" placeholder="e.g., '01,02,03', '1-4', '01-04', '01,02,03-5'">
+          </div>
+          <div class="control-row">
+            <label>shuffling</label>
+            <div class="radio-group">
+                <label class="radio-option">
+                    <input type="radio" name="test-shuffle-mode" value="shuffle-bag" checked>
+                    <span>shuffle bag</span>
+                </label>
+                <label class="radio-option">
+                    <input type="radio" name="test-shuffle-mode" value="random">
+                    <span>completely random</span>
+                </label>
+            </div>
+          </div>
+          <div class="control-row">
+            <label>guess by</label>
+            <div class="radio-group">
+              <label class="radio-option">
+                <input type="radio" id="test-guess-mode-track" name="test-guess-mode" value="track" checked>
+                <span>track id</span>
+              </label>
+              <label class="radio-option">
+                <input type="radio" id="test-guess-mode-group" name="test-guess-mode" value="group">
+                <span>group id</span>
+              </label>
+            </div>
           </div>
           <button id="test-start-btn">start</button>
           <button id="test-stop-btn" class="btn-quiet" style="display: none;">stop</button>
